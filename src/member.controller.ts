@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query } from '@nestjs/common'
 import { ObjectId } from 'bson'
 
 import {connect} from './db'
@@ -168,7 +168,11 @@ export class MemberController{
     }
 
     @Post('charge')
-    async charge(memberId,amount,card,employees){
+    async charge(
+        @Body('memberId') memberId,
+        @Body('amount')amount,
+        @Body('card')card,
+        @Body('employees')employees){
         memberId = ObjectId.createFromHexString(memberId)
         card = card?ObjectId.createFromHexString(card._id):card
         employees = employees.map(it=>ObjectId.createFromHexString(it._id))
@@ -182,8 +186,8 @@ export class MemberController{
         return true
     }
 
-    @Post('add')
-    async add (member,card,employees){
+    @Post()
+    async add (@Body('member')member,@Body('card')card,@Body('employees')employees){
         card = card?ObjectId.createFromHexString(card._id):card
         employees = employees.map(it=>ObjectId.createFromHexString(it._id))
 

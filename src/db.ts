@@ -13,6 +13,5 @@ export const get = async(name)=>{
     const db = mongoClient.db('MemberManages')
     const arr = await db.collection(name).find().toArray()
     await mongoClient.close()
-    // arr.forEach(v=>v._id = v._id.toString())
     return arr
 }
