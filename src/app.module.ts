@@ -10,7 +10,6 @@ import { ServiceItemController } from './serviceitem.controller';
 @Module({
   imports: [],
   controllers: [
-    AppController,
     MemberController,
     ConsumeController,
     ServiceItemController,
