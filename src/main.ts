@@ -4,7 +4,7 @@ import * as fs from 'fs'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule,{ httpsOptions:{
-    pfx:fs.readFileSync('C:/Users/zwb/sources/MemberManages/192.168.2.138.pfx')
+    pfx:fs.readFileSync('../MemberManages/192.168.2.138.pfx')
   }
     
   });
