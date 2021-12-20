@@ -59,7 +59,10 @@ export class ConsumeController {
             }
             else
             {
-                await members.updateOne({_id:m._id},{$inc:{balance:priceSum*-1}},{session})
+                await members.updateOne({_id:m._id},{$inc:{
+                    balance:priceSum*-1,
+                    consume:priceSum
+                }},{session})
     
                 result = await consumes.insertOne({
                     memberId:m._id,

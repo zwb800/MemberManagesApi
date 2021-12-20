@@ -63,10 +63,16 @@ const charge = async(mongoClient,member,amount,card,employees)=>{
         {
             member.no = await getNo(db)
             member.balance = balance
+            member.newCardTime = new Date()
             const r = await members.insertOne(member,{session})
             member._id = r.insertedId
             accountBalance = balance
-            
+            //新顾客送头疗1个
+            arrBalances.push({
+                memberId:member._id,
+                balance:1,
+                serviceItemId:ObjectId.createFromHexString('61ab92e756e8dcc27e17a0a9')
+            })
         }
         
         //插入次卡余额
@@ -82,17 +88,19 @@ const charge = async(mongoClient,member,amount,card,employees)=>{
             }
         }
 
-        
-        //插入充值记录
-        await chargeItem.insertOne({
-            memberId:member._id,
-            employees,
-            balance:accountBalance,//充完余额
-            pay:pay,//实际支付
-            amount,//单付
-            itemId:card,
-            time:new Date()
-        },{session})
+        if(prepayCard || pay>0){
+            //插入充值记录
+            await chargeItem.insertOne({
+                memberId:member._id,
+                employees,
+                balance:accountBalance,//充完余额
+                pay:pay,//实际支付
+                amount,//单付
+                itemId:card,
+                time:new Date()
+            },{session})
+        }
+       
     })
 
     await session.endSession()
@@ -129,18 +137,26 @@ export class MemberController{
     }
 
     @Get()
-    async all(@Query('search')keyword = ''){
+    async all(@Query('search')keyword = '', 
+    @Query('index')index=1,
+    @Query('pageSize')pageSize=10){
+        index = parseInt(index.toString())
+        pageSize = parseInt(pageSize.toString())
+        
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')
         const members = db.collection('Member')
         
-        const cursor = members.find({$or:[{name:{$regex:keyword}},{phone:{$regex:keyword}}]},{
-            sort:{no:-1}
-        })
+        const cursor = members.find({
+            $or:[
+                {name:{$regex:keyword}},
+                {phone:{$regex:keyword}}
+            ]},{
+            sort:{newCardTime:-1}
+        }).skip((index-1) * pageSize).limit(pageSize)
         const arr = await cursor.toArray()
         await mongoClient.close()
         return arr
-        
     }
 
     @Get('charge-list')

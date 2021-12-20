@@ -51,8 +51,12 @@ export class EmployeeController{
             for(const c of chargeArr){
                 const m = await members.findOne({_id:c.memberId},{projection:{_id:1,name:1}})
                 const card = await prepaidCard.findOne({_id:c.itemId})
-                chargeResult.push({_id:m._id.toString(),name:m.name,card:card,
-                    commission:card.price / 10 / c.employees.length})
+                chargeResult.push({
+                    _id:m._id.toString(),
+                    name:m.name,
+                    card:card,
+                    commission:card.price?(card.price / 10 / c.employees.length):0
+                })
             }
            
             result.push({
