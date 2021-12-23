@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common'
 import { ObjectId } from 'bson'
+import { HeadID } from './constant'
 
 import {connect} from './db'
 
@@ -71,7 +72,7 @@ const charge = async(mongoClient,member,amount,card,employees)=>{
             arrBalances.push({
                 memberId:member._id,
                 balance:1,
-                serviceItemId:ObjectId.createFromHexString('61ab92e756e8dcc27e17a0a9')
+                serviceItemId:HeadID
             })
         }
         
@@ -123,7 +124,7 @@ export class MemberController{
         const sItems = await serviceItems.find({_id:{$in:arrBalances.map(p=>p.serviceItemId)}}).toArray()
 
         const arrB = arrBalances.map(p=>{
-            const s = sItems.find(s=>s._id.toString() == p.serviceItemId.toString())
+            const s = sItems.find(s=>s._id.equals(p.serviceItemId))
             return {
                 serviceItemName:s.name,
                 balance:p.balance

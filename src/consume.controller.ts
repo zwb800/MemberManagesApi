@@ -68,15 +68,15 @@ export class ConsumeController {
                     memberId:m._id,
                     serviceItems:serviceItems.map((e)=>{
                         return {
-                            serviceItemId:ObjectId.createFromHexString(e.serviceItemId),
+                            serviceItemId:new ObjectId(e.serviceItemId),
                             count:e.count
                         }
                     }),
                     price:priceSum,
                     employees:employees.map((e)=>{
                         return { 
-                            employeeId:ObjectId.createFromHexString(e.employeeId),
-                            items:e.items.map(i=>ObjectId.createFromHexString(i))
+                            employeeId:new ObjectId(e.employeeId),
+                            items:e.items.map(i=>new ObjectId(i))
                         }
                     }),
                     time:new Date()
@@ -86,7 +86,7 @@ export class ConsumeController {
         
         await session.endSession()
         await mongoClient.close()
-        return true
+        return result
     }
     @Get()
     async getConsumeList(@Query("memberId") memberId){

@@ -1,5 +1,13 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { HeadID } from "./constant";
 import { get,connect } from "./db";
+
+const dateStr = (date:Date)=>{
+    
+    return `${date.getFullYear()}-${padStr(date.getMonth()+1)}-${padStr(date.getDate())}`
+}
+
+const padStr = (n:number)=>n.toString().padStart(2,'0')
 
 @Controller('employee')
 export class EmployeeController{
@@ -26,11 +34,12 @@ export class EmployeeController{
         for(const e of employees){
             const cArr = await consumes.find({
                 'employees.employeeId':e._id,
-                $and:[{time:{$gte:startDate}},{time:{$lte:endDate}}]
+                time:{$gte:startDate,$lte:endDate}
             }).toArray()
 
             const chargeArr = await charges.find({ 
                 employees:e._id,
+                itemId:{$ne:null},//过滤单充没办卡
                 $and:[{time:{$gte:startDate}},{time:{$lte:endDate}}]}).toArray()
             
             const consumers = Array()
@@ -69,4 +78,79 @@ export class EmployeeController{
         await mongoClient.close()
         return result
     }
+
+    @Get("footer")
+    async footer(@Query('startDate')startDate:Date,
+                 @Query('endDate')endDate:Date){
+
+        startDate = new Date(startDate)
+        endDate = new Date(endDate)
+
+        const mongoClient = await connect()
+        const db = mongoClient.db('MemberManages') 
+        
+        let sumNew = await db.collection('Member')
+        .count({newCardTime:{$lte:endDate,$gte:startDate}})
+        const consumes = await db.collection('Consumes').find(
+            {time:{$lte:endDate,$gte:startDate}
+        }).toArray()
+
+        const sItems = await db.collection('ServiceItem').find().toArray()
+        await mongoClient.close()
+        
+        let sum = 0
+
+        const items = sItems.map(s=>{
+            let count = 0
+            if(s._id.equals(HeadID)){
+                //计算只做了头疗的数量
+                consumes.forEach(c=>{
+                    if(c.employees.length == 1 &&
+                        c.employees[0].items.length==1 &&
+                        c.employees[0].items[0].equals(s._id)){
+                            count++
+                    }
+                })
+
+                 //计算做了头疗的数量
+                 consumes.forEach(c=>{
+                    c.employees.forEach(e=>{
+                        if(e.items.some(i=>i.equals(s._id)))
+                            sum++
+                    })
+                })
+            }
+            else{
+                //计算做了指定项目的数量
+                consumes.forEach(c=>{
+                    // c.serviceItems
+                    // .filter(c=>c.serviceItemId.equals(s._id))
+                    // .forEach(c=>count+=c.count)
+                    c.employees.forEach(e=>{
+                        if(e.items.some(i=>i.equals(s._id)))
+                            count++
+                    })
+                })
+            }
+            
+            return {
+                count:count,
+                label:s.shortName
+            }
+        })
+
+        let sale = 0
+        if(consumes.length>0){
+            sale = consumes.map(c=>c.price).reduce((t,n)=>t+n)
+        } 
+
+        return {
+            sum,
+            new:sumNew,
+            items,
+            sale
+        }
+    }
+
+
 }
