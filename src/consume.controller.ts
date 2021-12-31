@@ -88,24 +88,61 @@ export class ConsumeController {
         await mongoClient.close()
         return result
     }
+
+    @Post("cancel")
+    async cancel(@Body("id")id:ObjectId){
+        const mongoClient = await connect()
+        const db = mongoClient.db('MemberManages')
+
+
+
+        await mongoClient.close()
+    }
+
     @Get()
     async getConsumeList(@Query("memberId") memberId){
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')
         const consumes = db.collection('Consumes')
        
-        const consumesCursor = await consumes.find(
+        const arr = await consumes.find(
             {memberId:ObjectId.createFromHexString(memberId)},
-            {sort:{time:-1}}) 
-        const arr = await consumesCursor.toArray()
+            {sort:{time:-1}}) .toArray()
+ 
+        const result = await this.toConsumeList(db,arr)
+        await mongoClient.close()
+        return result
+    }
 
+    @Get("getAllConsumeList")
+    async getAllConsumeList(
+        @Query('startDate')startDate:Date,
+        @Query('endDate')endDate:Date){
+        const mongoClient = await connect()
+        const db = mongoClient.db('MemberManages')
+        const consumes = db.collection('Consumes')
+        startDate = new Date(startDate)
+        endDate = new Date(endDate)
+        const arr = await consumes.find(
+            {time:{$lte:endDate,$gte:startDate}},
+            {sort:{time:-1}}) .toArray()
+ 
+        const result = await this.toConsumeList(db,arr)
+        await mongoClient.close()
+        return result
+    }
+
+    async toConsumeList(db,arr){
         const serviceItems = db.collection('ServiceItem')
         const cursorItems = await serviceItems.find()
         const arrServiceItems = await cursorItems.toArray()
-        
-        const result = arr.map(v=>{ 
-            return {
+        const members = db.collection('Member')
+        const result = new Array()
+        for (const v of arr) {
+            const member = await members.findOne({_id:v.memberId},{projection:{name:1}})
+            result.push( {
                 _id : v._id.toString(),
+                member:member.name,
                 product:v.serviceItems.map(s=>{
                     
                     const si = arrServiceItems.find(asi=>asi._id.equals(s.serviceItemId))
@@ -115,9 +152,9 @@ export class ConsumeController {
                     }}),
                 price:v.price,
                 time:v.time
-            }
-        })
-        await mongoClient.close()
+            })
+        }
+
         return result
     }
 }

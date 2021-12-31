@@ -96,6 +96,7 @@ export class EmployeeController{
         }).toArray()
 
         const sItems = await db.collection('ServiceItem').find().toArray()
+        const cardCount = await db.collection('ChargeItem').count({itemId:{$ne:null},time:{$lte:endDate,$gte:startDate}})
         await mongoClient.close()
         
         let sum = 0
@@ -105,11 +106,16 @@ export class EmployeeController{
             if(s._id.equals(HeadID)){
                 //计算只做了头疗的数量
                 consumes.forEach(c=>{
-                    if(c.employees.length == 1 &&
-                        c.employees[0].items.length==1 &&
-                        c.employees[0].items[0].equals(s._id)){
+                    // if(c.employees.length == 1 &&
+                    //     c.employees[0].items.length==1 &&
+                    //     c.employees[0].items[0].equals(s._id)){
+                    //         count++
+                    // }
+
+                    c.employees.forEach(e=>{
+                        if(e.items.length==1 && e.items.some(i=>i.equals(s._id)))
                             count++
-                    }
+                    })
                 })
 
                  //计算做了头疗的数量
@@ -148,7 +154,8 @@ export class EmployeeController{
             sum,
             new:sumNew,
             items,
-            sale
+            sale,
+            cardCount
         }
     }
 
