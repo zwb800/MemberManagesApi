@@ -1,0 +1,31 @@
+component: http
+name: http-nestjs-azXWU1b5Z
+org: '1305763203'
+app: member-manages-api
+stage: dev
+inputs:
+  region: ap-beijing
+  src:
+    src: ./
+    dist: ./
+    hook: npm run build
+    exclude:
+      - .env
+  faas:
+    runtime: Nodejs12.16
+    eip: true
+    timeout: 3
+    memorySize: 64
+    tags: []
+    framework: nestjs
+    environments: []
+    layers:
+      - name: member-manages-api-layer
+        version: 1
+  apigw:
+    timeout: 60
+    protocols:
+      - http
+      - https
+    environment: release
+    customDomains: []
