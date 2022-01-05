@@ -1,5 +1,5 @@
 import { Controller, Get } from "@nestjs/common";
-import { get } from "./db";
+import { get } from "./mongodb/db";
 
 @Controller('prepaidcard')
 export class PrepaidCardController{

@@ -4,13 +4,14 @@ org: '1305763203'
 app: member-manages-api
 stage: dev
 inputs:
-  region: ap-beijing
+  region: ap-shanghai
   src:
     src: ./
     dist: ./
     hook: npm run build
     exclude:
       - .env
+      - 'node_modules/**'
   faas:
     runtime: Nodejs12.16
     eip: true
@@ -19,9 +20,12 @@ inputs:
     tags: []
     framework: nestjs
     environments: []
+    # vpc:
+    #   vpcId: 'vpc-d4gajp9o'
+    #   subnetId: 'subnet-p5pm99rr'
     layers:
       - name: member-manages-api-layer
-        version: 1
+        version: 2
   apigw:
     timeout: 60
     protocols:
