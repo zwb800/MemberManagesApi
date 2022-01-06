@@ -9,4 +9,4 @@ export enum DbType{
     MongoDb,TencentCouldBase
   }
   
-export let dbType = DbType.MongoDb
+export let dbType = DbType.TencentCouldBase

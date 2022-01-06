@@ -79,8 +79,8 @@ export class MemberController{
         @Body('amount')amount,
         @Body('card')card,
         @Body('employees')employees){
-        memberId = ObjectId.createFromHexString(memberId)
-        card = card?ObjectId.createFromHexString(card._id):card
+        // memberId = ObjectId.createFromHexString(memberId)
+        // card = card?ObjectId.createFromHexString(card._id):card
         employees = employees.map(it=>ObjectId.createFromHexString(it._id))
 
         this.memberService.charge({_id:memberId},amount,card,employees)
@@ -89,7 +89,7 @@ export class MemberController{
 
     @Post()
     async add (@Body('member')member,@Body('card')card,@Body('employees')employees){
-        card = card?ObjectId.createFromHexString(card._id):card
+        // card = card?ObjectId.createFromHexString(card._id):card
         employees = employees.map(it=>ObjectId.createFromHexString(it._id))
 
         this.memberService.charge(member,member.balance,card,employees)
