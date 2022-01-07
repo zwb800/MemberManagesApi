@@ -1,15 +1,67 @@
 import { Injectable } from '@nestjs/common';
 import { connect } from './db';
 import { HeadID } from '../constant'
+import { ObjectId } from 'mongodb';
 
 
 export abstract class IMemberService{
+    abstract get(id:string)
     abstract all(keyword:string,index:number,pageSize:number)
     abstract charge(memberId,amount,card,employees)
+    abstract getChargeList(memberId)
 }
 
 @Injectable()
 export class MemberService implements IMemberService {
+    async get(id:string){
+        const mongoClient = await connect()
+        const db = mongoClient.db('MemberManages')
+        const members = db.collection('Member')
+        const balances = db.collection('Balance')
+        const serviceItems = db.collection('ServiceItem')
+        
+        const m = await members.findOne({_id:new ObjectId(id)}) 
+
+        const arrBalances = await balances.find({memberId:m._id}).toArray()
+        const sItems = await serviceItems.find({_id:{$in:arrBalances.map(p=>p.serviceItemId)}}).toArray()
+
+        const arrB = arrBalances.map(p=>{
+            const s = sItems.find(s=>s._id.equals(p.serviceItemId))
+            return {
+                serviceItemName:s.name,
+                balance:p.balance
+            }
+        })
+        await mongoClient.close()
+        return {
+            member:m,
+            balances:arrB
+        }
+    }
+
+    async getChargeList(memberId){
+        memberId = new ObjectId(memberId)
+        const mongoClient = await connect()
+        const db = mongoClient.db('MemberManages')
+        const chargeItem = db.collection('ChargeItem')
+        const cards = await db.collection('PrepaidCard')
+
+        const arrCards = await cards.find().toArray()
+        const citems = await chargeItem.find({memberId:memberId},{sort:{time:-1}}).toArray()
+        return citems.map(c=>{
+            let card 
+            if(c.itemId)
+              card = arrCards.find(ac=>ac._id.equals(c.itemId))
+            return {
+                time:c.time,
+                balance:c.balance,
+                pay:c.pay,
+                amount:c.amount,
+                card:card?card.label:null,
+            }
+        })
+    }
+
   async all(keyword:string,index:number,pageSize:number) {
     const mongoClient = await connect()
     const db = mongoClient.db('MemberManages')
@@ -46,6 +98,8 @@ const maxNo = await members.findOne({},{
 
 
 async charge(member,amount,card,employees){
+    employees = employees.map(it=>new ObjectId(it._id))
+    card = new ObjectId(card._id)
     const mongoClient = await connect()
     const db = mongoClient.db('MemberManages')
     const members = db.collection('Member')

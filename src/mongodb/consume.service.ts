@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { connect } from "./db";
 
 export abstract class IConsumeService{
-    abstract consume(memberId:ObjectId,serviceItems,employees)
+    abstract consume(memberId:string,serviceItems,employees)
     abstract cancel(id:ObjectId)
     abstract getConsumeList(memberId)
     abstract getAllConsumeList(
@@ -16,13 +16,13 @@ export abstract class IConsumeService{
 export class ConsumeService implements IConsumeService{
 
     async consume(
-        memberId:ObjectId,
+        memberId:string,
         serviceItems,
         employees){
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')
         const members = db.collection('Member')
-        const m = await members.findOne({_id:memberId}) 
+        const m = await members.findOne({_id:new ObjectId(memberId)}) 
         const consumes = db.collection('Consumes')
         const collBalance = db.collection('Balance')
         const balances = await collBalance.find({memberId:m._id}).toArray()

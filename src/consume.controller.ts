@@ -11,7 +11,7 @@ export class ConsumeController {
         @Body('serviceItems') serviceItems,
         @Body('employees')employees){
         
-        return this.consumeService.consume(new ObjectId(memberId),serviceItems,employees)
+        return this.consumeService.consume(memberId,serviceItems,employees)
     }
 
     @Post("cancel")
@@ -21,7 +21,7 @@ export class ConsumeController {
 
     @Get()
     async getConsumeList(@Query("memberId") memberId){
-        return this.consumeService.getConsumeList(new ObjectId(memberId))
+        return this.consumeService.getConsumeList(memberId)
     }
 
     @Get("getAllConsumeList")

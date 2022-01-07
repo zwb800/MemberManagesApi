@@ -1,12 +1,61 @@
 import { Database } from '@cloudbase/node-sdk';
 import { Injectable } from '@nestjs/common';
-import { ObjectId } from 'mongodb';
 import { HeadID } from 'src/constant';
 import { IMemberService } from 'src/mongodb/member.service';
 import { connect } from './db';
 @Injectable()
 export class MemberService implements IMemberService {
+  async getChargeList(memberId) {
+    const db = connect()
+    const chargeItem = db.collection('ChargeItem')
+    const cards = await db.collection('PrepaidCard')
+
+    const arrCards = await (await cards.get()).data
+    const citems = await (await chargeItem
+        .where({memberId:memberId})
+        .orderBy("time","desc").get()).data
+    return citems.map(c=>{
+        let card 
+        if(c.itemId)
+          card = arrCards.find(ac=>ac._id == c.itemId)
+        return {
+            time:c.time,
+            balance:c.balance,
+            pay:c.pay,
+            amount:c.amount,
+            card:card?card.label:null,
+        }
+    })
+  }
+  async get(id: string) {
+      const db = connect()
+    const members = db.collection('Member')
+    const balances = db.collection('Balance')
+    const serviceItems = db.collection('ServiceItem')
+    
+    const m = (await members.doc(id).get()).data[0]
+    const _ = db.command
+    const arrBalances = await (await balances
+        .where({memberId:m._id}).field({serviceItemId:true,balance:true}).get()).data
+    const sItems = await (await serviceItems.where(
+        {_id:_.in(arrBalances.map(p=>p.serviceItemId))
+    }).get()).data
+
+    const arrB = arrBalances.map(p=>{
+        const s = sItems.find(s=>s._id == (p.serviceItemId))
+        return {
+            serviceItemName:s.name,
+            balance:p.balance
+        }
+    })
+    return {
+        member:m,
+        balances:arrB
+    }
+  }
   async charge(member: any, amount: any, card: any, employees: any) {
+    employees = employees.map(it=>it._id)
+    card = card._id
     const db = await connect()
     const members = db.collection('Member')
     const cards = db.collection('PrepaidCard')
@@ -14,7 +63,7 @@ export class MemberService implements IMemberService {
     const chargeItem = db.collection('ChargeItem')
     const _ = db.command
 
-    const prepayCard = (await cards.doc(card._id).get()).data[0]
+    const prepayCard = (await cards.doc(card).get()).data[0]
     let balance = amount
     let pay = amount
     let arrBalances = Array()
@@ -36,7 +85,7 @@ export class MemberService implements IMemberService {
         }
     }
     let accountBalance = 0
-    // await db.runTransaction(async()=>{
+    return await db.runTransaction(async()=>{
         let balancesOld = Array()
         
         if(member._id)
@@ -66,7 +115,7 @@ export class MemberService implements IMemberService {
         
         //插入次卡余额
         for (const b of arrBalances) {
-            if(balancesOld.some(bo=>bo.serviceItemId.equals(b.serviceItemId)))
+            if(balancesOld.some(bo=>bo.serviceItemId ==b.serviceItemId))
             {
                 await balances.where({memberId:member._id,serviceItemId:b.serviceItemId}).update(
                     {balance:_.inc(b.balance)})
@@ -89,13 +138,15 @@ export class MemberService implements IMemberService {
                 time:new Date()
             })
         }
-       
-    // })
+
+        return true
+    })
   }
+
   async getNo(db: Database.Db): Promise<number> {
     let no = 80000
     const members = db.collection('Member')
-    const maxNo = await (await members.field("no")
+    const maxNo = await (await members.field({no:true})
     .orderBy("no","desc").limit(1).get()).data
         
         if(maxNo && maxNo.length==1)
