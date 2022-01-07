@@ -55,7 +55,6 @@ export class MemberService implements IMemberService {
   }
   async charge(member: any, amount: any, card: any, employees: any) {
     employees = employees.map(it=>it._id)
-    card = card._id
     const db = await connect()
     const members = db.collection('Member')
     const cards = db.collection('PrepaidCard')
@@ -63,7 +62,10 @@ export class MemberService implements IMemberService {
     const chargeItem = db.collection('ChargeItem')
     const _ = db.command
 
-    const prepayCard = (await cards.doc(card).get()).data[0]
+    let prepayCard = null
+    if(card)
+        prepayCard = (await cards.doc(card._id).get()).data[0]
+
     let balance = amount
     let pay = amount
     let arrBalances = Array()
