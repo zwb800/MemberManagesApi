@@ -134,6 +134,7 @@ async charge(member,amount,card,employees){
         
         if(member._id)
         {
+            member._id = new ObjectId(member._id)
             balancesOld = await balances.find({memberId:member._id}).toArray()
             //更新余额
             const result = await members.findOneAndUpdate({_id:member._id},
