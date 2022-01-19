@@ -1,6 +1,5 @@
 import { Database } from "@cloudbase/node-sdk";
 import { Injectable } from "@nestjs/common";
-import { ObjectId } from "mongodb";
 import { IConsumeService } from "src/mongodb/consume.service";
 import { connect } from "./db";
 
@@ -26,8 +25,8 @@ export class ConsumeService implements IConsumeService{
         let result = null
         await db.runTransaction(async(transaction)=>{
             for(const s of serviceItems){
-                let acount = 0
-                let decount = 0
+                let acount = 0//划余额次数
+                let decount = 0//划次卡次数
                 const ba = balances.find(b=>b.serviceItemId == s.serviceItemId)
                 if(ba && ba.balance)//如果还有次数 先划次 否则划余额
                 {
@@ -37,8 +36,13 @@ export class ConsumeService implements IConsumeService{
                         return await transaction.rollback("insufficient balance")
     
                     
-                    if(decount>0)
-                        await collBalance.doc(ba._id).update({balance:_.inc(decount*-1)})
+                    if(decount>0){
+                        await collBalance.doc(ba._id).update({
+                            balance:_.inc(decount*-1)
+                        })
+
+                        s.counterCard = true
+                    }
                 }
                 else //没有次数 全部划余额
                     acount = s.count
@@ -47,6 +51,7 @@ export class ConsumeService implements IConsumeService{
                 {
                     const as = sItems.find(asi=>asi._id.toString() == s.serviceItemId)
                     priceSum += as.price * s.count
+                    s.counterCard = false
                 }
             }
             
@@ -56,17 +61,20 @@ export class ConsumeService implements IConsumeService{
             }
             else
             {
-                await members.doc(m._id).update({
-                    balance:_.inc(priceSum*-1),
-                    consume:_.inc(priceSum)
-                })
+                if(priceSum>0){//扣除余额
+                    await members.doc(m._id).update({
+                        balance:_.inc(priceSum*-1),
+                        consume:_.inc(priceSum)
+                    })
+                }
     
                 result = await consumes.add({
                     memberId:m._id,
                     serviceItems:serviceItems.map((e)=>{
                         return {
                             serviceItemId:e.serviceItemId,
-                            count:e.count
+                            count:e.count,
+                            counterCard:e.counterCard
                         }
                     }),
                     price:priceSum,
@@ -83,22 +91,67 @@ export class ConsumeService implements IConsumeService{
         
         return result
     }
-    cancel(id: ObjectId) {
-        throw new Error("Method not implemented.");
+    async refund(id: string) {
+        const db = await connect()
+        const _ = db.command
+        const members = db.collection('Member')
+        const consumes = db.collection('Consumes')
+        const collBalance = db.collection('Balance')
+        const c = (await consumes.doc(id).get()).data[0]
+        const m = (await members.doc(c.memberId).get()).data[0]
+        const balances = await (await collBalance.where({memberId:m._id}).get()).data
+        let result = false
+        await db.runTransaction(async (transaction)=>{
+            if(c.price>0){
+                await members.doc(c.memberId).update({//退回余额
+                    balance:_.inc(c.price),
+                    consume:_.inc(c.price*-1)
+                })
+            }
+
+            for (const s of c.serviceItems.filter(s=>s.counterCard)) {
+                if(s.counterCard){//次卡消费退回次数
+                    await collBalance.where({
+                        memberId:c.memberId,
+                        serviceItemId:s.serviceItemId
+                    }).update({
+                        balance:_.inc(s.count)
+                    })
+                }
+            }
+
+            await consumes.doc(id).update({refund:true})
+            result = true
+        })
+
+        return result
     }
     async getConsumeList(memberId: any) {
         const db = connect()
         const consumes = db.collection('Consumes')
-       
+        const _ = db.command
         const arr = (await consumes.where(
-            {memberId:memberId})
+            {
+                memberId:memberId,
+                refund:_.neq(true)
+            })
             .orderBy("time","desc").get()).data
  
         const result = await this.toConsumeList(db,arr)
         return result
     }
-    getAllConsumeList(startDate: Date, endDate: Date) {
-        throw new Error("Method not implemented.");
+    async getAllConsumeList(startDate: Date, endDate: Date) {
+        const db = connect()
+        const consumes = db.collection('Consumes')
+        const _ = db.command
+        const arr = (await consumes.where(
+            {
+                time:_.lte(endDate).gte(startDate),
+                refund:_.neq(true)
+            }).orderBy("time","desc").get()).data
+ 
+        const result = await this.toConsumeList(db,arr)
+        return result
     }
 
     async toConsumeList(db:Database.Db,arr){

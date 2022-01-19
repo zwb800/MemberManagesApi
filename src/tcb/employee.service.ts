@@ -82,7 +82,8 @@ export class EmployeeService implements IEmployeeService{
 
         const arrMemberId = new Array<string>()
         const consumes = (await db.collection('Consumes').where({
-            time:_.lte(endDate).gte(startDate)
+            time:_.lte(endDate).gte(startDate),
+            refund:_.neq(true)
         }).get()).data
 
         consumes.map(c=>c.memberId).forEach(c=>arrMemberId.push(c))

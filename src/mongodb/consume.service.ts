@@ -4,7 +4,7 @@ import { connect } from "./db";
 
 export abstract class IConsumeService{
     abstract consume(memberId:string,serviceItems,employees)
-    abstract cancel(id:ObjectId)
+    abstract refund(id:string)
     abstract getConsumeList(memberId)
     abstract getAllConsumeList(
         startDate:Date,
@@ -98,7 +98,7 @@ export class ConsumeService implements IConsumeService{
         return result
     }
 
-    async cancel(id:ObjectId){
+    async refund(id:string){
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')
         await mongoClient.close()

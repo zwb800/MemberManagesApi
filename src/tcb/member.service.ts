@@ -90,7 +90,7 @@ export class MemberService implements IMemberService {
     return await db.runTransaction(async()=>{
         let balancesOld = Array()
         
-        if(member._id)
+        if(member._id && member._id!="")
         {
             balancesOld = await (await balances.where({memberId:member._id}).get()).data
             //更新余额
@@ -98,7 +98,7 @@ export class MemberService implements IMemberService {
                 {balance:_.inc(balance)})
             accountBalance = result.doc.balance
         }
-        else
+        else //新顾客
         {
             delete member._id
             member.no = await this.getNo(db)
@@ -108,11 +108,22 @@ export class MemberService implements IMemberService {
             member._id = r.id
             accountBalance = balance
             //新顾客送头疗1个
-            arrBalances.push({
-                memberId:member._id,
-                balance:1,
-                serviceItemId:HeadID
-            })
+
+            if(arrBalances.some(a=>a.serviceItemId == HeadID))
+            {
+                for (const a of arrBalances) {
+                    if(a.serviceItemId == HeadID)
+                    a.balance += 1
+                }
+            }
+            else
+            {
+                arrBalances.push({
+                    memberId:member._id,
+                    balance:1,
+                    serviceItemId:HeadID
+                })
+            }
         }
         
         //插入次卡余额
@@ -136,7 +147,7 @@ export class MemberService implements IMemberService {
                 balance:accountBalance,//充完余额
                 pay:pay,//实际支付
                 amount,//单付
-                itemId:card,
+                itemId:prepayCard._id,
                 time:new Date()
             })
         }

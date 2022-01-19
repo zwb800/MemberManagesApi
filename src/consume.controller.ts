@@ -14,9 +14,9 @@ export class ConsumeController {
         return this.consumeService.consume(memberId,serviceItems,employees)
     }
 
-    @Post("cancel")
-    async cancel(@Body("id")id:ObjectId){
-        this.consumeService.cancel(new ObjectId(id))
+    @Post("refund")
+    async refund(@Body("id")id:string){
+        return this.consumeService.refund(id)
     }
 
     @Get()
@@ -30,6 +30,6 @@ export class ConsumeController {
         @Query('endDate')endDate:Date){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.getAllConsumeList(startDate,endDate)
+        return this.consumeService.getAllConsumeList(startDate,endDate)
     }
 }
