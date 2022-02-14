@@ -24,6 +24,8 @@ import { ConsumeService as TcbConsumeService } from './tcb/consume.service';
 
 
 import { DbType, dbType } from './utils';
+import { IStockService, StockService } from './tcb/stock.service';
+import { StockController } from './stock.controller';
 
 
 
@@ -35,12 +37,14 @@ import { DbType, dbType } from './utils';
     ConsumeController,
     ServiceItemController,
     EmployeeController,
-    PrepaidCardController
+    PrepaidCardController,
+    StockController
   ],
   providers: [AppService,
     {provide:IMemberService,useClass:dbType == DbType.MongoDb?MemberService:TcbMemberService},
     {provide:IEmployeeService,useClass:dbType == DbType.MongoDb?EmployeeService:TcbEmployeeService},
-    {provide:IConsumeService,useClass:dbType == DbType.MongoDb?ConsumeService:TcbConsumeService}
+    {provide:IConsumeService,useClass:dbType == DbType.MongoDb?ConsumeService:TcbConsumeService},
+    {provide:IStockService,useClass:dbType == DbType.MongoDb?StockService:StockService}
   ],
 })
 export class AppModule {}

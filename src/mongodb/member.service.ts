@@ -5,6 +5,8 @@ import { ObjectId } from 'mongodb';
 
 
 export abstract class IMemberService{
+    abstract refund(id: string)
+    abstract getAllChargeList(startDate: Date, endDate: Date)
     abstract get(id:string)
     abstract all(keyword:string,index:number,pageSize:number)
     abstract charge(memberId,amount,card,employees)
@@ -13,6 +15,12 @@ export abstract class IMemberService{
 
 @Injectable()
 export class MemberService implements IMemberService {
+    refund(id: string) {
+        throw new Error('Method not implemented.');
+    }
+    getAllChargeList(startDate: Date, endDate: Date) {
+        
+    }
     async get(id:string){
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')

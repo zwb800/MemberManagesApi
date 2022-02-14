@@ -1,8 +1,9 @@
 import { init } from '@cloudbase/node-sdk'
+import { env } from 'src/utils';
 const app = init({
   env: "cloud-member-manages-1bz97b438b3",
-  secretId:"AKIDvf8KGwLTKuCDxQcW9VaNvCDxQcXBYdS0",
-  secretKey:"II2VhcHfndCUUDgsnQmshEUTBcmeGdkZ",
+  secretId:env.secretId,
+  secretKey:env.secretKey,
 
 });
 

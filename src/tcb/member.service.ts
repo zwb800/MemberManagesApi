@@ -5,14 +5,102 @@ import { IMemberService } from 'src/mongodb/member.service';
 import { connect } from './db';
 @Injectable()
 export class MemberService implements IMemberService {
+
+    async refund(id: string) {
+        const db = await connect()
+        const _ = db.command
+        const members = db.collection('Member')
+        const chargeItem = db.collection('ChargeItem')
+        const collBalance = db.collection('Balance')
+        const cards = db.collection('PrepaidCard')
+        const c = (await chargeItem.doc(id).get()).data[0]
+        const m = (await members.doc(c.memberId).get()).data[0]
+        const balances = await (await collBalance.where({memberId:m._id}).get()).data
+        let result = false
+        await db.runTransaction(async (transaction)=>{
+            if(c.amount>0){
+
+                m.balance -= c.amount
+            }
+
+            if(c.itemId){//充卡退回
+                const card = (await cards.doc(c.itemId).get()).data[0]
+
+                if(card.gift){//储值卡退回
+                    m.balance -= (card.price+card.gift)
+                }
+
+                if(card.serviceItemIds){
+                    await card.serviceItemIds.forEach(async s => {
+                        const b = balances.filter(b=>b.serviceItemId == s.serviceItemId)
+                
+                        if(b.length>0)
+                        {
+                            await collBalance.doc(b[0]._id).update({
+                                balance:_.inc(s.count*-1)
+                            })
+                        }
+                    });
+                }
+            }
+
+            if(m.balance<0){
+                return transaction.rollback("撤销后余额不足")
+            }
+
+            await members.doc(c.memberId).update({
+                balance:m.balance
+            })
+
+            await chargeItem.doc(id).update({refund:true})
+            result = true
+        })
+
+        return result
+    }
+
+  async getAllChargeList(startDate: Date, endDate: Date) {
+    const db = connect()
+    const chargeItem = db.collection('ChargeItem')
+    const cards = await db.collection('PrepaidCard')
+    const arrCards = await (await cards.get()).data
+    const _ = db.command
+    const arr = (await chargeItem.where(
+        {
+            time:_.lte(endDate).gte(startDate),
+            refund:_.neq(true)
+        }).orderBy("time","desc").get()).data
+
+    
+        const result = new Array()
+        for (const v of arr) {
+            const member = (await db.collection('Member')
+            .doc(v.memberId).field({name:1}).get()).data[0]
+            let card 
+            if(v.itemId)
+            card = arrCards.find(ac=>ac._id == v.itemId)
+            result.push( {
+                _id : v._id.toString(),
+                member:member.name,
+                card:card?card.label:null,
+                price:v.price,
+                time:v.time,
+                balance:v.balance,
+                pay:v.pay,
+                amount:v.amount,
+            })
+        }
+
+        return result
+  }
   async getChargeList(memberId) {
     const db = connect()
     const chargeItem = db.collection('ChargeItem')
     const cards = await db.collection('PrepaidCard')
-
+    const _ = db.command
     const arrCards = await (await cards.get()).data
     const citems = await (await chargeItem
-        .where({memberId:memberId})
+        .where({memberId:memberId,refund:_.neq(true)})
         .orderBy("time","desc").get()).data
     return citems.map(c=>{
         let card 
@@ -147,7 +235,7 @@ export class MemberService implements IMemberService {
                 balance:accountBalance,//充完余额
                 pay:pay,//实际支付
                 amount,//单付
-                itemId:prepayCard._id,
+                itemId:prepayCard?prepayCard._id:null,
                 time:new Date()
             })
         }

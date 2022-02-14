@@ -27,6 +27,19 @@ export class MemberController{
        return this.memberService.all(keyword,index,pageSize)
     }
 
+    @Get('all-charge-list')
+    async getAllChargeList( @Query('startDate')startDate:Date,
+    @Query('endDate')endDate:Date){
+        startDate = new Date(startDate)
+        endDate = new Date(endDate)
+        return this.memberService.getAllChargeList(startDate,endDate)
+    }
+
+    @Post("refund")
+    async refund(@Body("id")id:string){
+        return this.memberService.refund(id)
+    }
+
     @Get('charge-list')
     async getChargeList(@Query('memberId')memberId){
         return this.memberService.getChargeList(memberId)

@@ -1,6 +1,8 @@
 import { Database } from "@cloudbase/node-sdk";
 import { Injectable } from "@nestjs/common";
+import { BSONRegExp } from "mongodb";
 import { IConsumeService } from "src/mongodb/consume.service";
+import { Sms } from "src/sms";
 import { connect } from "./db";
 
 
@@ -10,7 +12,7 @@ export class ConsumeService implements IConsumeService{
     async consume(memberId: string, serviceItems: any, employees: any) {
         const db = await connect()
         const members = db.collection('Member')
-        const m = await (await members.doc(memberId).get()).data[0]
+        let m = await (await members.doc(memberId).get()).data[0]
         const consumes = db.collection('Consumes')
         const collBalance = db.collection('Balance')
         const _ = db.command
@@ -62,10 +64,12 @@ export class ConsumeService implements IConsumeService{
             else
             {
                 if(priceSum>0){//扣除余额
-                    await members.doc(m._id).update({
+                    const updateResult = await members.doc(m._id).update({
                         balance:_.inc(priceSum*-1),
                         consume:_.inc(priceSum)
                     })
+                    m = await (await members.doc(memberId).get()).data[0]
+                    console.log(updateResult)
                 }
     
                 result = await consumes.add({
@@ -86,6 +90,8 @@ export class ConsumeService implements IConsumeService{
                     }),
                     time:new Date()
                 })
+
+                Sms.consumeSms(m.phone,m.no.toString().substring(3),priceSum,m.balance)
             }
         })
         
@@ -111,12 +117,14 @@ export class ConsumeService implements IConsumeService{
 
             for (const s of c.serviceItems.filter(s=>s.counterCard)) {
                 if(s.counterCard){//次卡消费退回次数
-                    await collBalance.where({
-                        memberId:c.memberId,
-                        serviceItemId:s.serviceItemId
-                    }).update({
-                        balance:_.inc(s.count)
-                    })
+                    const b = balances.filter(b=>b.serviceItemId == s.serviceItemId)
+                    
+                    if(b.length>0)
+                    {
+                        await collBalance.doc(b[0]._id).update({
+                            balance:_.inc(s.count)
+                        })
+                    }
                 }
             }
 
