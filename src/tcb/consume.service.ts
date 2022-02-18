@@ -43,7 +43,12 @@ export class ConsumeService implements IConsumeService{
                             balance:_.inc(decount*-1)
                         })
 
-                        s.counterCard = true
+                        const b = (await collBalance.doc(ba._id).field({balance:true}).get()).data[0]
+
+                        s.counterCard = true //次卡消费
+                        Sms.consumeCounterCard(m.phone,
+                            m.no.toString().substring(2),
+                            decount,b.balance)
                     }
                 }
                 else //没有次数 全部划余额
@@ -53,7 +58,7 @@ export class ConsumeService implements IConsumeService{
                 {
                     const as = sItems.find(asi=>asi._id.toString() == s.serviceItemId)
                     priceSum += as.price * s.count
-                    s.counterCard = false
+                    s.counterCard = false //储值卡消费
                 }
             }
             
@@ -70,6 +75,7 @@ export class ConsumeService implements IConsumeService{
                     })
                     m = await (await members.doc(memberId).get()).data[0]
                     console.log(updateResult)
+                    Sms.consumeSms(m.phone,m.no.toString().substring(2),priceSum,m.balance)
                 }
     
                 result = await consumes.add({
@@ -91,7 +97,6 @@ export class ConsumeService implements IConsumeService{
                     time:new Date()
                 })
 
-                Sms.consumeSms(m.phone,m.no.toString().substring(3),priceSum,m.balance)
             }
         })
         

@@ -1,24 +1,20 @@
 import {sms} from 'tencentcloud-sdk-nodejs'
-import { dateStr, dateTimeStr, env } from './utils'
+import {  padStr } from './utils'
 
 
 export const Sms = {
     client:null,
     init:()=>{
-        // 导入对应产品模块的client models。
+
         const smsClient = sms.v20210111.Client
             
         const client = new smsClient({
-        credential: {
-            secretId: env.secretId,
-            secretKey: env.secretKey,
-        },
-        region: "ap-nanjing",
-        profile: {
-            httpProfile: {
-            endpoint: "sms.tencentcloudapi.com"
-            },
-        },
+          credential: {
+              secretId: process.env.SECRET_ID,
+              secretKey: process.env.SECRET_KEY,
+          },
+          region: "ap-nanjing",
+          profile:{},
         })
         Sms.client = client
     },
@@ -40,8 +36,21 @@ export const Sms = {
         })
     },
     consumeSms:(phone:string,memberNo:string,costPrice:number,balance:number)=>{
-        const timeStr = dateTimeStr(new Date())
-        Sms.send([phone],'1303413',[memberNo,timeStr,costPrice.toString(),balance.toString()])
+        Sms.send([phone],'1303413',[memberNo,Sms.timeStr(),costPrice.toString(),balance.toString()])
+    },
+    consumeCounterCard:(phone:string,memberNo:string,costCount:number,balanceCount:number)=>{
+      Sms.send([phone],'1307434',[memberNo,Sms.timeStr(),`[基础头疗:数量${costCount},剩余${balanceCount}]`])
+    },
+    chargeSms:(phone:string,memberNo:string,chargePrice:number,balance:number)=>{
+      Sms.send([phone],'1307461',[memberNo,Sms.timeStr(),chargePrice.toString(),balance.toString()])
+    },
+    chargeCounterCard:(phone:string,memberNo:string,chargeCount:number,balanceCount:number)=>{
+      Sms.send([phone],'1307463',[memberNo,Sms.timeStr(),`[基础头疗:续次${chargeCount},剩余${balanceCount}]`])
+    },
+    timeStr:()=>{
+      const date = new Date()
+      const timeStr = `${padStr(date.getMonth()+1)}月${padStr(date.getDate())}日 ${padStr(date.getHours())}:${padStr(date.getMinutes())}`
+      return timeStr
     }
 }
 

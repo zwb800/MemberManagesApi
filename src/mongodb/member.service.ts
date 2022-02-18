@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 
 
 export abstract class IMemberService{
+    abstract import(members)
     abstract refund(id: string)
     abstract getAllChargeList(startDate: Date, endDate: Date)
     abstract get(id:string)
@@ -15,6 +16,9 @@ export abstract class IMemberService{
 
 @Injectable()
 export class MemberService implements IMemberService {
+    import(members: any) {
+        throw new Error('Method not implemented.');
+    }
     refund(id: string) {
         throw new Error('Method not implemented.');
     }

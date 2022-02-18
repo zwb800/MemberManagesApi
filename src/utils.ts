@@ -11,9 +11,5 @@ export enum DbType{
   MongoDb,TencentCouldBase
 }
 
-export const env = {
-  secretId:'AKIDvf8KGwLTKuCDxQcW9VaNvCDxQcXBYdS0',
-  secretKey:'II2VhcHfndCUUDgsnQmshEUTBcmeGdkZ',
-}
   
 export let dbType = DbType.TencentCouldBase

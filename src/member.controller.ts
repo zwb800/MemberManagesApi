@@ -63,4 +63,11 @@ export class MemberController{
         return await this.memberService.charge(member,member.balance,card,employees)
         
     }
+
+    @Post('import')
+    async import (@Body('members')members){
+        // card = card?ObjectId.createFromHexString(card._id):card
+        return await this.memberService.import(members)
+        
+    }
 }

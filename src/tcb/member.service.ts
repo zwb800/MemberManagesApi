@@ -2,9 +2,59 @@ import { Database } from '@cloudbase/node-sdk';
 import { Injectable } from '@nestjs/common';
 import { HeadID } from 'src/constant';
 import { IMemberService } from 'src/mongodb/member.service';
+import { Sms } from 'src/sms';
 import { connect } from './db';
 @Injectable()
 export class MemberService implements IMemberService {
+
+    async import(mArr){
+        const db = await connect()
+        const _ = db.command
+        const members = db.collection('Member')
+        const collBalance = db.collection('Balance')
+
+        if((await members.count()).total>0)
+        {
+            return
+        }
+
+        const balanceArr = new Array()
+
+        return await db.runTransaction(async (tran)=>{
+            const insertM = mArr.map(m=>{
+               return {
+                    no:m.no,
+                    name:m.name,
+                    phone:m.phone,
+                    balance:m.balance,
+                    consume:m.consume,
+                    newCardTime:new Date(m.newCardTime)
+               }
+            })
+            const result = await members.add(insertM)
+
+            if(result.ids){
+                const mH = mArr.filter(m=>m.head)
+                const mN = mH.map(m=>m.no)
+
+                const ms = (await members.where({no:_.in(mN)}).field({_id:true,no:true}).get()).data
+                
+                for (const m of ms) {
+                    for (const h of mH){
+                        if(h.no == m.no){
+                            balanceArr.push({
+                                memberId:m._id,
+                                balance:h.head,
+                                serviceItemId:HeadID
+                            })
+                        }
+                    }
+                }
+            }
+
+            await collBalance.add(balanceArr)
+        })
+    }
 
     async refund(id: string) {
         const db = await connect()
@@ -145,6 +195,7 @@ export class MemberService implements IMemberService {
     employees = employees.map(it=>it._id)
     const db = await connect()
     const members = db.collection('Member')
+    const m = await (await members.doc(member._id).get()).data[0]
     const cards = db.collection('PrepaidCard')
     const balances = db.collection('Balance')
     const chargeItem = db.collection('ChargeItem')
@@ -238,6 +289,14 @@ export class MemberService implements IMemberService {
                 itemId:prepayCard?prepayCard._id:null,
                 time:new Date()
             })
+
+            if(balance){
+                Sms.chargeSms(
+                    m.phone,
+                    m.no.toString().substring(2),
+                    balance,
+                    accountBalance)
+            }
         }
 
         return true
