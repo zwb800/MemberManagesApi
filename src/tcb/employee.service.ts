@@ -18,7 +18,7 @@ export class EmployeeService implements IEmployeeService{
 
         const sItems = await (await db.collection('ServiceItem').get()).data
         const cardCount = (await db.collection('ChargeItem')
-        .where({itemId:_.neq(null),time:_.lte(endDate).gte(startDate)}).count()).total
+        .where({itemId:_.neq(null),refund:_.eq(null),time:_.lte(endDate).gte(startDate)}).count()).total
         
         let sum = 0
 
@@ -90,6 +90,7 @@ export class EmployeeService implements IEmployeeService{
 
         const charges = (await db.collection('ChargeItem').where({ 
             itemId:_.neq(null),//过滤单充没办卡
+            refund:_.eq(null),
             time:_.lte(endDate).gte(startDate)}).get()).data
 
         charges.map(c=>c.memberId).forEach(c=>{
@@ -129,13 +130,16 @@ export class EmployeeService implements IEmployeeService{
             const chargeResult = Array()
             for(const c of chargeArr){
                 const m = members.find(m=>m._id == c.memberId)
-                const card = prepaidCard.find(p=>p._id == c.itemId)
-                chargeResult.push({
-                    _id:m._id,
-                    name:m.name,
-                    card:card,
-                    commission:card.price?(card.price / 10 / c.employees.length):0
-                })
+                if(m){
+                    const card = prepaidCard.find(p=>p._id == c.itemId)
+                    chargeResult.push({
+                        _id:m._id,
+                        name:m.name,
+                        card:card,
+                        commission:card.price?(card.price / 10 / c.employees.length):0
+                    })
+                }
+               
             }
            
             result.push({

@@ -26,14 +26,21 @@ export const Sms = {
           TemplateId:templateId,
           TemplateParamSet: templateParams,
         }
-    
-        Sms.client.SendSms(params, function (err, response) {
-          if (err) {
-            console.log(err)
-            return
-          }
-          console.log(response)
-        })
+        
+        if(process.env.SERVERLESS){
+          Sms.client.SendSms(params, function (err, response) {
+            if (err) {
+              console.log(err)
+              return
+            }
+            console.log(response)
+          })
+        }
+        else
+        {
+          console.log(templateParams.toString()+'->'+ phones.toString())
+        }
+        
     },
     consumeSms:(phone:string,memberNo:string,costPrice:number,balance:number)=>{
         Sms.send([phone],'1303413',[memberNo,Sms.timeStr(),costPrice.toString(),balance.toString()])

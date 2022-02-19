@@ -126,19 +126,24 @@ export class MemberService implements IMemberService {
         for (const v of arr) {
             const member = (await db.collection('Member')
             .doc(v.memberId).field({name:1}).get()).data[0]
-            let card 
-            if(v.itemId)
-            card = arrCards.find(ac=>ac._id == v.itemId)
-            result.push( {
-                _id : v._id.toString(),
-                member:member.name,
-                card:card?card.label:null,
-                price:v.price,
-                time:v.time,
-                balance:v.balance,
-                pay:v.pay,
-                amount:v.amount,
-            })
+            if(member){
+                let card 
+                if(v.itemId){
+                    card = arrCards.find(ac=>ac._id == v.itemId)
+                    result.push( {
+                        _id : v._id.toString(),
+                        member:member.name,
+                        card:card?card.label:null,
+                        price:v.price,
+                        time:v.time,
+                        balance:v.balance,
+                        pay:v.pay,
+                        amount:v.amount,
+                    })
+                }
+               
+            }
+            
         }
 
         return result
@@ -195,7 +200,7 @@ export class MemberService implements IMemberService {
     employees = employees.map(it=>it._id)
     const db = await connect()
     const members = db.collection('Member')
-    const m = await (await members.doc(member._id).get()).data[0]
+    
     const cards = db.collection('PrepaidCard')
     const balances = db.collection('Balance')
     const chargeItem = db.collection('ChargeItem')
@@ -291,6 +296,7 @@ export class MemberService implements IMemberService {
             })
 
             if(balance){
+                const m = await (await members.doc(member._id).get()).data[0]
                 Sms.chargeSms(
                     m.phone,
                     m.no.toString().substring(2),
