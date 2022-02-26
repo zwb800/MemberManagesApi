@@ -1,8 +1,6 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common'
-import { ObjectId } from 'bson'
 
 
-import {connect} from './mongodb/db'
 import { IMemberService } from './mongodb/member.service'
 
 
@@ -59,15 +57,18 @@ export class MemberController{
 
     @Post()
     async add (@Body('member')member,@Body('card')card,@Body('employees')employees){
-        // card = card?ObjectId.createFromHexString(card._id):card
         return await this.memberService.charge(member,member.balance,card,employees)
         
     }
 
     @Post('import')
     async import (@Body('members')members){
-        // card = card?ObjectId.createFromHexString(card._id):card
         return await this.memberService.import(members)
         
+    }
+    
+    @Post('gift')
+    async gift (@Body('memberId') memberId,@Body('gifts') gifts){
+        return await this.memberService.gift(memberId,gifts)
     }
 }

@@ -66,45 +66,49 @@ export class MemberService implements IMemberService {
         const c = (await chargeItem.doc(id).get()).data[0]
         const m = (await members.doc(c.memberId).get()).data[0]
         const balances = await (await collBalance.where({memberId:m._id}).get()).data
-        let result = false
-        await db.runTransaction(async (transaction)=>{
-            if(c.amount>0){
-
-                m.balance -= c.amount
-            }
-
-            if(c.itemId){//充卡退回
-                const card = (await cards.doc(c.itemId).get()).data[0]
-
-                if(card.gift){//储值卡退回
-                    m.balance -= (card.price+card.gift)
+        let result = ''
+        try{
+            await db.runTransaction(async (transaction)=>{
+                if(c.amount>0){
+    
+                    m.balance -= c.amount
                 }
-
-                if(card.serviceItemIds){
-                    await card.serviceItemIds.forEach(async s => {
-                        const b = balances.filter(b=>b.serviceItemId == s.serviceItemId)
-                
-                        if(b.length>0)
-                        {
-                            await collBalance.doc(b[0]._id).update({
-                                balance:_.inc(s.count*-1)
-                            })
-                        }
-                    });
+    
+                if(c.itemId){//充卡退回
+                    const card = (await cards.doc(c.itemId).get()).data[0]
+    
+                    if(card.gift){//储值卡退回
+                        m.balance -= (card.price+card.gift)
+                    }
+    
+                    if(card.serviceItemIds){
+                        await card.serviceItemIds.forEach(async s => {
+                            const b = balances.filter(b=>b.serviceItemId == s.serviceItemId)
+                    
+                            if(b.length>0)
+                            {
+                                await transaction.collection('Balance').doc(b[0]._id).update({
+                                    balance:_.inc(s.count*-1)
+                                })
+                            }
+                        });
+                    }
                 }
-            }
-
-            if(m.balance<0){
-                return transaction.rollback("撤销后余额不足")
-            }
-
-            await members.doc(c.memberId).update({
-                balance:m.balance
+    
+                if(m.balance<0){
+                    result = "撤销后余额不足"
+                    await transaction.rollback("撤销后余额不足")
+                }
+    
+                await transaction.collection('Member').doc(c.memberId).update({
+                    balance:m.balance
+                })
+    
+                await transaction.collection('ChargeItem').doc(id).update({refund:true})
             })
-
-            await chargeItem.doc(id).update({refund:true})
-            result = true
-        })
+        }catch(e){
+            console.error(e)
+        }
 
         return result
     }
@@ -130,6 +134,7 @@ export class MemberService implements IMemberService {
                 let card 
                 if(v.itemId){
                     card = arrCards.find(ac=>ac._id == v.itemId)
+                }
                     result.push( {
                         _id : v._id.toString(),
                         member:member.name,
@@ -140,7 +145,7 @@ export class MemberService implements IMemberService {
                         pay:v.pay,
                         amount:v.amount,
                     })
-                }
+                
                
             }
             
@@ -196,14 +201,43 @@ export class MemberService implements IMemberService {
         balances:arrB
     }
   }
+
+  async gift(memberId:string,arrBalances:Array<{serviceItemId:string,count:number}>){
+    const db = await connect()
+    const balances = db.collection('Balance')
+    const balancesOld = await (await balances.where({ memberId:memberId }).get()).data
+    const _ = db.command
+
+    await db.runTransaction(async(tran)=>{
+        for (const b of arrBalances) {
+            if(balancesOld.some(bo=>bo.serviceItemId ==b.serviceItemId))
+            {
+                await tran.collection("Balance").where({
+                    memberId:memberId,
+                    serviceItemId:b.serviceItemId
+                    }).update({
+                        balance:_.inc(b.count)
+                    })
+            }
+            else
+            {
+                await tran.collection("Balance").add({
+                    memberId:memberId,
+                    balance:b.count,
+                    serviceItemId:b.serviceItemId
+                })
+            }
+        }
+    })
+
+    return true
+  }
+
   async charge(member: any, amount: any, card: any, employees: any) {
     employees = employees.map(it=>it._id)
     const db = await connect()
-    const members = db.collection('Member')
     
     const cards = db.collection('PrepaidCard')
-    const balances = db.collection('Balance')
-    const chargeItem = db.collection('ChargeItem')
     const _ = db.command
 
     let prepayCard = null
@@ -215,7 +249,6 @@ export class MemberService implements IMemberService {
     let arrBalances = Array()
 
     if(prepayCard){
-
         pay += prepayCard.price
         if(prepayCard.gift){
             balance += (prepayCard.price+prepayCard.gift)
@@ -230,15 +263,16 @@ export class MemberService implements IMemberService {
             })
         }
     }
+
     let accountBalance = 0
-    return await db.runTransaction(async()=>{
+    return await db.runTransaction(async(tran)=>{
         let balancesOld = Array()
         
         if(member._id && member._id!="")
         {
-            balancesOld = await (await balances.where({memberId:member._id}).get()).data
+            balancesOld = await (await tran.collection("Balance").where({memberId:member._id}).get()).data
             //更新余额
-            const result = await members.where({_id:member._id}).updateAndReturn(
+            const result = await tran.collection("Member").where({_id:member._id}).updateAndReturn(
                 {balance:_.inc(balance)})
             accountBalance = result.doc.balance
         }
@@ -248,44 +282,44 @@ export class MemberService implements IMemberService {
             member.no = await this.getNo(db)
             member.balance = balance
             member.newCardTime = new Date()
-            const r = await members.add(member)
+            const r = await tran.collection("Member").add(member)
             member._id = r.id
             accountBalance = balance
             //新顾客送头疗1个
 
-            if(arrBalances.some(a=>a.serviceItemId == HeadID))
-            {
-                for (const a of arrBalances) {
-                    if(a.serviceItemId == HeadID)
-                    a.balance += 1
-                }
-            }
-            else
-            {
-                arrBalances.push({
-                    memberId:member._id,
-                    balance:1,
-                    serviceItemId:HeadID
-                })
-            }
+            // if(arrBalances.some(a=>a.serviceItemId == HeadID))
+            // {
+            //     for (const a of arrBalances) {
+            //         if(a.serviceItemId == HeadID)
+            //         a.balance += 1
+            //     }
+            // }
+            // else
+            // {
+            //     arrBalances.push({
+            //         memberId:member._id,
+            //         balance:1,
+            //         serviceItemId:HeadID
+            //     })
+            // }
         }
         
         //插入次卡余额
         for (const b of arrBalances) {
             if(balancesOld.some(bo=>bo.serviceItemId ==b.serviceItemId))
             {
-                await balances.where({memberId:member._id,serviceItemId:b.serviceItemId}).update(
+                await tran.collection("Balance").where({memberId:member._id,serviceItemId:b.serviceItemId}).update(
                     {balance:_.inc(b.balance)})
             }
             else
             {
-                await balances.add(Object.assign(b,{memberId:member._id}))
+                await tran.collection("Balance").add(Object.assign(b,{memberId:member._id}))
             }
         }
 
         if(prepayCard || pay>0){
             //插入充值记录
-            await chargeItem.add({
+            await tran.collection("ChargeItem").add({
                 memberId:member._id,
                 employees,
                 balance:accountBalance,//充完余额
@@ -296,7 +330,7 @@ export class MemberService implements IMemberService {
             })
 
             if(balance){
-                const m = await (await members.doc(member._id).get()).data[0]
+                const m = await (await tran.collection("Member").where({_id:member._id}).get()).data[0]
                 Sms.chargeSms(
                     m.phone,
                     m.no.toString().substring(2),

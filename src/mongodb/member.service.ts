@@ -12,10 +12,14 @@ export abstract class IMemberService{
     abstract all(keyword:string,index:number,pageSize:number)
     abstract charge(memberId,amount,card,employees)
     abstract getChargeList(memberId)
+    abstract gift(memberId,gifts)
 }
 
 @Injectable()
 export class MemberService implements IMemberService {
+    gift(memberId: any, gifts: any) {
+        throw new Error('Method not implemented.');
+    }
     import(members: any) {
         throw new Error('Method not implemented.');
     }

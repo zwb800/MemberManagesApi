@@ -13,12 +13,37 @@ export class EmployeeService implements IEmployeeService{
         .where({newCardTime:_.lte(endDate).gte(startDate)})
         .count()).total
         const consumes = (await db.collection('Consumes').where(
-            {time:_.lte(endDate).gte(startDate)
+            {refund:_.eq(null),time:_.lte(endDate).gte(startDate)
         }).get()).data
 
         const sItems = await (await db.collection('ServiceItem').get()).data
-        const cardCount = (await db.collection('ChargeItem')
-        .where({itemId:_.neq(null),refund:_.eq(null),time:_.lte(endDate).gte(startDate)}).count()).total
+
+        const prepaidCards = await (await db.collection('PrepaidCard').get()).data
+
+        const cards = (await db.collection('ChargeItem')
+        .where({refund:_.eq(null),time:_.lte(endDate).gte(startDate)}).get()).data
+        const cardCount = cards.filter(c=>c.itemId != null).length
+
+
+
+        let cardPrice = 0; 
+        let otherPrice = 0;
+        
+        const l = cards.filter(c=>c.itemId != null) 
+
+        if(l.length>0){
+            cardPrice = l.map(c=>c.pay).reduce((t,n)=>t+n)
+
+            for (const itemId of l) {
+                const c = prepaidCards.find(p=>p._id == itemId)
+                
+            }
+        }
+
+        const ll = cards.filter(c=>c.itemId == null) 
+        if(ll.length>0){
+            otherPrice = ll.map(c=>c.pay).reduce((t,n)=>t+n)
+        }
         
         let sum = 0
 
@@ -67,7 +92,15 @@ export class EmployeeService implements IEmployeeService{
             new:sumNew,
             items,
             sale,
-            cardCount
+            cardCount,
+            cardPrice,
+            otherPrice,
+            cards:l.map(c=>{
+                const p = prepaidCards.find(p=>p._id == c.itemId)
+                if(p){
+                    return p.price
+                }
+            })
         }
     }
 
@@ -110,22 +143,24 @@ export class EmployeeService implements IEmployeeService{
             const consumers = Array()
             for (const c of cArr) {
                 const m = members.find(m=>m._id == c.memberId)
-                const items = Array()
-                const itemIds = c.employees.find(v=>v.employeeId == e._id).items
-                
-                for (const i of itemIds) {
-                    const s = await serviceItems.find(v=>v._id == i)
-                    items.push(s.shortName)
+                if(m){
+                    const items = Array()
+                    const itemIds = c.employees.find(v=>v.employeeId == e._id).items
+                    
+                    for (const i of itemIds) {
+                        const s = await serviceItems.find(v=>v._id == i)
+                        items.push(s.shortName)
+                    }
+                    
+                    consumers.push({
+                        _id:m._id,
+                        name:m.name,
+                        items:items
+                    })
                 }
-                
-                consumers.push({
-                    _id:m._id,
-                    name:m.name,
-                    items:items
-                })
             }
 
-            //充值记录
+            // 充值记录
             const chargeArr = charges.filter(c=>c.employees.includes(e._id))
             const chargeResult = Array()
             for(const c of chargeArr){
@@ -145,11 +180,11 @@ export class EmployeeService implements IEmployeeService{
             result.push({
                 employee:e.name,
                 consumers:consumers,
-                charges:chargeResult
+                charges:chargeResult,
             })
         }
 
-        return result
+        return {rows:result,footer:await this.footer(startDate,endDate)}
     }
     
 }
