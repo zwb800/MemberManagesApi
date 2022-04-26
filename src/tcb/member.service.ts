@@ -73,6 +73,22 @@ export class MemberService implements IMemberService {
     
                     m.balance -= c.amount
                 }
+
+                if(c.pay == 0)//赠送退回
+                {
+                    if(c.serviceItems){
+                        await c.serviceItems.forEach(async s => {
+                            const b = balances.find(b=>b.serviceItemId == s.serviceItemId)
+
+                            if(b)
+                            {
+                                await transaction.collection('Balance').doc(b._id).update({
+                                    balance:_.inc(s.count*-1)
+                                })
+                            }
+                        });
+                    }
+                }
     
                 if(c.itemId){//充卡退回
                     const card = (await cards.doc(c.itemId).get()).data[0]
@@ -83,11 +99,11 @@ export class MemberService implements IMemberService {
     
                     if(card.serviceItemIds){
                         await card.serviceItemIds.forEach(async s => {
-                            const b = balances.filter(b=>b.serviceItemId == s.serviceItemId)
+                            const b = balances.find(b=>b.serviceItemId == s.serviceItemId)
                     
-                            if(b.length>0)
+                            if(b)
                             {
-                                await transaction.collection('Balance').doc(b[0]._id).update({
+                                await transaction.collection('Balance').doc(b._id).update({
                                     balance:_.inc(s.count*-1)
                                 })
                             }
@@ -113,7 +129,7 @@ export class MemberService implements IMemberService {
         return result
     }
 
-  async getAllChargeList(startDate: Date, endDate: Date) {
+  async getAllChargeList(startDate: Date, endDate: Date,shopId:string) {
     const db = connect()
     const chargeItem = db.collection('ChargeItem')
     const cards = await db.collection('PrepaidCard')
@@ -122,10 +138,12 @@ export class MemberService implements IMemberService {
     const arr = (await chargeItem.where(
         {
             time:_.lte(endDate).gte(startDate),
-            refund:_.neq(true)
+            refund:_.neq(true),
+            shopId:shopId
         }).orderBy("time","desc").get()).data
 
-    
+        const arrServiceItems = (await db.collection('ServiceItem').get()).data
+
         const result = new Array()
         for (const v of arr) {
             const member = (await db.collection('Member')
@@ -134,6 +152,16 @@ export class MemberService implements IMemberService {
                 let card 
                 if(v.itemId){
                     card = arrCards.find(ac=>ac._id == v.itemId)
+                }
+
+                let product = null
+                if(v.serviceItems){
+                    product = v.serviceItems.map(s=>{
+                    const si = arrServiceItems.find(asi=>asi._id == s.serviceItemId)
+                    return {
+                        name:si.name,
+                        count:s.count
+                    }})
                 }
                     result.push( {
                         _id : v._id.toString(),
@@ -144,6 +172,7 @@ export class MemberService implements IMemberService {
                         balance:v.balance,
                         pay:v.pay,
                         amount:v.amount,
+                        product
                     })
                 
                
@@ -162,16 +191,29 @@ export class MemberService implements IMemberService {
     const citems = await (await chargeItem
         .where({memberId:memberId,refund:_.neq(true)})
         .orderBy("time","desc").get()).data
+
+    const arrServiceItems = (await db.collection('ServiceItem').get()).data
     return citems.map(c=>{
         let card 
         if(c.itemId)
           card = arrCards.find(ac=>ac._id == c.itemId)
+
+        let product = null
+        if(c.serviceItems){
+            product = c.serviceItems.map(s=>{
+            const si = arrServiceItems.find(asi=>asi._id == s.serviceItemId)
+            return {
+                name:si.name,
+                count:s.count
+            }})
+        }
         return {
             time:c.time,
             balance:c.balance,
             pay:c.pay,
             amount:c.amount,
             card:card?card.label:null,
+            product
         }
     })
   }
@@ -202,7 +244,7 @@ export class MemberService implements IMemberService {
     }
   }
 
-  async gift(memberId:string,arrBalances:Array<{serviceItemId:string,count:number}>){
+  async gift(memberId:string,arrBalances:Array<{serviceItemId:string,count:number}>,shopId:string){
     const db = await connect()
     const balances = db.collection('Balance')
     const balancesOld = await (await balances.where({ memberId:memberId }).get()).data
@@ -228,12 +270,22 @@ export class MemberService implements IMemberService {
                 })
             }
         }
+
+        //插入充值记录
+        await tran.collection("ChargeItem").add({
+            memberId:memberId,
+            pay:0,//实际支付
+            amount:0,//单付
+            time:new Date(),
+            serviceItems:arrBalances,
+            shopId:shopId
+        })
     })
 
     return true
   }
 
-  async charge(member: any, amount: any, card: any, employees: any) {
+  async charge(member: any, amount: any, card: any, employees: any,shopId:string) {
     employees = employees.map(it=>it._id)
     const db = await connect()
     
@@ -282,8 +334,10 @@ export class MemberService implements IMemberService {
             member.no = await this.getNo(db)
             member.balance = balance
             member.newCardTime = new Date()
+            member.shopId = shopId
             const r = await tran.collection("Member").add(member)
             member._id = r.id
+            
             accountBalance = balance
             //新顾客送头疗1个
 
@@ -308,7 +362,7 @@ export class MemberService implements IMemberService {
         for (const b of arrBalances) {
             if(balancesOld.some(bo=>bo.serviceItemId ==b.serviceItemId))
             {
-                await tran.collection("Balance").where({memberId:member._id,serviceItemId:b.serviceItemId}).update(
+                const updateResult = await tran.collection("Balance").where({memberId:member._id,serviceItemId:b.serviceItemId}).updateAndReturn(
                     {balance:_.inc(b.balance)})
             }
             else
@@ -326,16 +380,26 @@ export class MemberService implements IMemberService {
                 pay:pay,//实际支付
                 amount,//单付
                 itemId:prepayCard?prepayCard._id:null,
-                time:new Date()
+                time:new Date(),
+                shopId:shopId
             })
 
+            const m = await (await tran.collection("Member").where({_id:member._id}).get()).data[0]
+
             if(balance){
-                const m = await (await tran.collection("Member").where({_id:member._id}).get()).data[0]
                 Sms.chargeSms(
                     m.phone,
                     m.no.toString().substring(2),
                     balance,
                     accountBalance)
+            }
+            else if(arrBalances.length){
+                const headB = arrBalances.find(b=>b.serviceItemId == HeadID)
+                if(headB){
+                    const oldB = await (await (tran.collection("Balance").where({memberId:member._id,serviceItemId:HeadID}).field({balance:1}).get())).data[0]
+                    Sms.chargeCounterCard(m.phone, m.no.toString().substring(2),headB.balance,oldB.balance)
+                }
+          
             }
         }
 

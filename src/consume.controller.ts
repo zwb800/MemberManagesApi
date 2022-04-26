@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Param, Post, Query, Req } from '@nestjs/common'
 import { ObjectId } from 'bson'
 import { IConsumeService } from './mongodb/consume.service'
 
@@ -9,9 +9,10 @@ export class ConsumeController {
     async consume(
         @Body('memberId') memberId:string,
         @Body('serviceItems') serviceItems,
-        @Body('employees')employees){
+        @Body('employees')employees,
+        @Headers('shopId') shopId:string){
         
-        return this.consumeService.consume(memberId,serviceItems,employees)
+        return this.consumeService.consume(memberId,serviceItems,employees,shopId)
     }
 
     @Post("refund")
@@ -27,9 +28,9 @@ export class ConsumeController {
     @Get("getAllConsumeList")
     async getAllConsumeList(
         @Query('startDate')startDate:Date,
-        @Query('endDate')endDate:Date){
+        @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.consumeService.getAllConsumeList(startDate,endDate)
+        return this.consumeService.getAllConsumeList(startDate,endDate,shopId)
     }
 }

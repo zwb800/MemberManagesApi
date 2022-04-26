@@ -3,12 +3,12 @@ import { ObjectId } from "mongodb";
 import { connect } from "./db";
 
 export abstract class IConsumeService{
-    abstract consume(memberId:string,serviceItems,employees)
+    abstract consume(memberId:string,serviceItems,employees,shopId)
     abstract refund(id:string)
     abstract getConsumeList(memberId)
     abstract getAllConsumeList(
         startDate:Date,
-        endDate:Date)
+        endDate:Date,shopId:string)
 
 }
 

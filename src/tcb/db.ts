@@ -9,6 +9,16 @@ export const connect = ()=>{
   return app.database();
 }
 
-export const get = async(name)=>{
-  return (await connect().collection(name).get()).data
+export const get = async(name,shopId)=>{
+  const coll =  connect().collection(name)
+  let query = null
+  if(shopId)
+  {
+    query = coll.where({shopId})
+  }
+  else{
+    query = coll
+  }
+
+  return (await query.get()).data
 }

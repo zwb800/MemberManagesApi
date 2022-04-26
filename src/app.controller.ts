@@ -8,6 +8,6 @@ export class AppController {
 
   @Get()
   async getHello() {
-    return "hello"
+    return this.appService.getHello()
   }
 }

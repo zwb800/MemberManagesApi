@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query,Headers } from '@nestjs/common'
 
 
 import { IMemberService } from './mongodb/member.service'
@@ -27,10 +27,10 @@ export class MemberController{
 
     @Get('all-charge-list')
     async getAllChargeList( @Query('startDate')startDate:Date,
-    @Query('endDate')endDate:Date){
+    @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.memberService.getAllChargeList(startDate,endDate)
+        return this.memberService.getAllChargeList(startDate,endDate,shopId)
     }
 
     @Post("refund")
@@ -48,16 +48,17 @@ export class MemberController{
         @Body('memberId') memberId,
         @Body('amount')amount,
         @Body('card')card,
-        @Body('employees')employees){
+        @Body('employees')employees,
+        @Headers('shopId') shopId){
         // memberId = ObjectId.createFromHexString(memberId)
         // card = card?ObjectId.createFromHexString(card._id):card
-        this.memberService.charge({_id:memberId},amount,card,employees)
+        await this.memberService.charge({_id:memberId},amount,card,employees,shopId)
         return true
     }
 
     @Post()
-    async add (@Body('member')member,@Body('card')card,@Body('employees')employees){
-        return await this.memberService.charge(member,member.balance,card,employees)
+    async add (@Body('member')member,@Body('card')card,@Body('employees')employees,@Headers('shopId') shopId){
+        return await this.memberService.charge(member,member.balance,card,employees,shopId)
         
     }
 
@@ -68,7 +69,7 @@ export class MemberController{
     }
     
     @Post('gift')
-    async gift (@Body('memberId') memberId,@Body('gifts') gifts){
-        return await this.memberService.gift(memberId,gifts)
+    async gift (@Body('memberId') memberId,@Body('gifts') gifts,@Headers('shopId') shopId){
+        return await this.memberService.gift(memberId,gifts,shopId)
     }
 }

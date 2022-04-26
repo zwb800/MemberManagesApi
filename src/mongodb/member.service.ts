@@ -7,12 +7,12 @@ import { ObjectId } from 'mongodb';
 export abstract class IMemberService{
     abstract import(members)
     abstract refund(id: string)
-    abstract getAllChargeList(startDate: Date, endDate: Date)
+    abstract getAllChargeList(startDate: Date, endDate: Date,shopId:string)
     abstract get(id:string)
     abstract all(keyword:string,index:number,pageSize:number)
-    abstract charge(memberId,amount,card,employees)
+    abstract charge(memberId,amount,card,employees,shopId)
     abstract getChargeList(memberId)
-    abstract gift(memberId,gifts)
+    abstract gift(memberId,gifts,shopId)
 }
 
 @Injectable()

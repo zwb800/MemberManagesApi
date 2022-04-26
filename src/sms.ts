@@ -1,6 +1,6 @@
 import {sms} from 'tencentcloud-sdk-nodejs'
-import {  padStr } from './utils'
-
+import { format } from 'date-fns'
+import { zhCN} from 'date-fns/locale'
 
 export const Sms = {
     client:null,
@@ -56,7 +56,7 @@ export const Sms = {
     },
     timeStr:()=>{
       const date = new Date()
-      const timeStr = `${padStr(date.getMonth()+1)}月${padStr(date.getDate())}日 ${padStr(date.getHours())}:${padStr(date.getMinutes())}`
+      const timeStr = format(date,'MM月dd日 HH:mm',{locale:zhCN})
       return timeStr
     }
 }

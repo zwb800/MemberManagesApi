@@ -1,22 +1,22 @@
-import { Database } from "@cloudbase/node-sdk";
-import { Injectable } from "@nestjs/common";
-import { BSONRegExp } from "mongodb";
-import { IConsumeService } from "src/mongodb/consume.service";
-import { Sms } from "src/sms";
-import { connect } from "./db";
-
-
+import { Database } from '@cloudbase/node-sdk'
+import { Injectable } from '@nestjs/common'
+import { HeadID } from 'src/constant'
+import { IConsumeService } from 'src/mongodb/consume.service'
+import { Sms } from 'src/sms'
+import { connect } from './db'
 
 @Injectable()
-export class ConsumeService implements IConsumeService{
-    async consume(memberId: string, serviceItems: any, employees: any) {
+export class ConsumeService implements IConsumeService {
+    async consume(memberId: string, serviceItems: any, employees: any,shopId:string) {
         const db = await connect()
         const members = db.collection('Member')
         let m = await (await members.doc(memberId).get()).data[0]
         const consumes = db.collection('Consumes')
         const collBalance = db.collection('Balance')
         const _ = db.command
-        const balances = await (await collBalance.where({memberId:m._id}).get()).data
+    const balances = await (
+      await collBalance.where({ memberId: m._id }).get()
+    ).data
 
         const serviceItemsCollection = db.collection('ServiceItem')
         const sids = serviceItems.map(s=>s.serviceItemId)
@@ -44,12 +44,13 @@ export class ConsumeService implements IConsumeService{
                             const b = await transaction.collection('Balance').where({_id:ba._id}).updateAndReturn({
                                 balance:_.inc(decount*-1)
                             })
-
-                            Sms.consumeCounterCard(m.phone,
-                                m.no.toString().substring(2),
-                                decount,
-                                b.doc.balance
-                                )
+                            if(b.doc.serviceItemId == HeadID){
+                                Sms.consumeCounterCard(m.phone,
+                                    m.no.toString().substring(2),
+                                    decount,
+                                    b.doc.balance)
+                            }
+                            
                         }
                     }
                     else //没有次数 全部划余额
@@ -96,7 +97,8 @@ export class ConsumeService implements IConsumeService{
                                 items:e.items
                             }
                         }),
-                        time:new Date()
+                        time:new Date(),
+                        shopId:shopId
                     })
                 }
             })
@@ -128,7 +130,7 @@ export class ConsumeService implements IConsumeService{
                 if(s.counterCard){//次卡消费退回次数
                     const b = balances.find(b=>b.serviceItemId == s.serviceItemId)
                     
-                    if(b.length>0)
+                    if(b)
                     {
                         await transaction.collection('Balance').doc(b._id).update({
                             balance:_.inc(s.count)
@@ -156,14 +158,15 @@ export class ConsumeService implements IConsumeService{
         const result = await this.toConsumeList(db,arr)
         return result
     }
-    async getAllConsumeList(startDate: Date, endDate: Date) {
+    async getAllConsumeList(startDate: Date, endDate: Date,shopId:string) {
         const db = connect()
         const consumes = db.collection('Consumes')
         const _ = db.command
         const arr = (await consumes.where(
             {
                 time:_.lte(endDate).gte(startDate),
-                refund:_.neq(true)
+                refund:_.neq(true),
+                shopId:shopId
             }).orderBy("time","desc").get()).data
  
         const result = await this.toConsumeList(db,arr)
@@ -176,19 +179,21 @@ export class ConsumeService implements IConsumeService{
         for (const v of arr) {
             const member = (await db.collection('Member')
             .doc(v.memberId).field({name:1}).get()).data[0]
-            result.push( {
-                _id : v._id.toString(),
-                member:member.name,
-                product:v.serviceItems.map(s=>{
-                    
-                    const si = arrServiceItems.find(asi=>asi._id ==s.serviceItemId)
-                    return {
-                        name:si.name,
-                        count:s.count
-                    }}),
-                price:v.price,
-                time:v.time
-            })
+            if(member){
+                result.push( {
+                    _id : v._id.toString(),
+                    member:member.name,
+                    product:v.serviceItems.map(s=>{
+                        const si = arrServiceItems.find(asi=>asi._id == s.serviceItemId)
+                        return {
+                            name:si.name,
+                            count:s.count
+                        }}),
+                    price:v.price,
+                    time:v.time
+                })
+            }
+           
         }
 
         return result

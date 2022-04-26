@@ -3,9 +3,9 @@ import { HeadID } from "src/constant"
 import { connect } from "src/mongodb/db"
 
 export abstract class IEmployeeService{
-    abstract work(startDate,endDate)
+    abstract work(startDate,endDate,shopId)
     abstract footer(startDate:Date,
-        endDate:Date)
+        endDate:Date,shopId)
 }
 
 @Injectable()

@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query,Headers } from "@nestjs/common";
 import { HeadID } from "./constant";
 import { get,connect } from "./mongodb/db";
 import { IEmployeeService } from "./mongodb/employee.service";
@@ -15,21 +15,22 @@ export class EmployeeController{
 
     @Get('work')
     async work(@Query('startDate')startDate:Date,
-    @Query('endDate')endDate:Date){
+    @Query('endDate')endDate:Date,@Headers('shopId')shopId:string){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
         
-        return this.employeeService.work(startDate,endDate)
+        return this.employeeService.work(startDate,endDate,shopId)
     }
 
     @Get("footer")
     async footer(@Query('startDate')startDate:Date,
-                 @Query('endDate')endDate:Date){
+                 @Query('endDate')endDate:Date,
+                 @Headers('shopId')shopId:string){
 
         startDate = new Date(startDate)
         endDate = new Date(endDate)
 
-        return this.employeeService.footer(startDate,endDate)
+        return this.employeeService.footer(startDate,endDate,shopId)
     }
 
 

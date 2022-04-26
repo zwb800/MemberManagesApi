@@ -4,7 +4,7 @@ import { connect } from "./db";
 
 export abstract class IStockService{
     abstract getLogs(id: string)
-    abstract add(name: string, unit: string)
+    abstract add(name: string, unit: string,shopId:string)
     abstract updateStock(id:string,num:number)
 }
 
@@ -19,17 +19,18 @@ export class StockService implements IStockService {
         .get()).data
     }
 
-    async add(name: string, unit: string) {
+    async add(name: string, unit: string,shopId:string) {
         const db = connect()
         const stocks = db.collection('Stock')
         const _ = db.command
-        const exists = (await (await stocks.where({name:_.eq(name)}).count()).total)>0
+        const exists = (await (await stocks.where({shopId,name:_.eq(name)}).count()).total)>0
         if(exists)
             return '商品已存在'
 
         return await stocks.add({
             name,
             unit,
+            shopId,
             count:0,
         })
     }
