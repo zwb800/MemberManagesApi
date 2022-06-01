@@ -124,7 +124,7 @@ export class EmployeeService implements IEmployeeService {
             time:_.lte(endDate).gte(startDate),
             refund:_.neq(true),
             shopId:shopId
-        }).get()).data
+        }).limit(10000).get()).data
 
         consumes.map(c=>c.memberId).forEach(c=>arrMemberId.push(c))
 
@@ -132,7 +132,7 @@ export class EmployeeService implements IEmployeeService {
             itemId:_.neq(null),//过滤单充没办卡
             refund:_.eq(null),
             shopId:shopId,
-            time:_.lte(endDate).gte(startDate)}).get()).data
+            time:_.lte(endDate).gte(startDate)}).limit(10000).get()).data
 
         charges.map(c=>c.memberId).forEach(c=>{
             if(!arrMemberId.includes(c))
@@ -193,6 +193,27 @@ export class EmployeeService implements IEmployeeService {
         }
 
         return {rows:result,footer:await this.footer(startDate,endDate,shopId)}
+    }
+
+    async statistics(year:number,month:number){
+          
+        const startDate = new Date(`${year}-${month}-1`)
+        const endDate = new Date(`${year}-${month}-1`)
+        endDate.setMonth(endDate.getMonth()+1)
+        endDate.setDate(endDate.getDate()-1)
+        endDate.setHours(23,59,59,999)
+        const db = connect()
+        const _ = db.command
+        const consumes = (await db.collection('Consumes').where({
+            time:_.lte(endDate).gte(startDate),
+            refund:_.neq(true),
+        }).field({employees:true,time:true,_id:false}).limit(10000).get()).data
+        const charges = (await db.collection('ChargeItem').where({ 
+            itemId:_.neq(null),//过滤单充没办卡
+            refund:_.eq(null),
+            time:_.lte(endDate).gte(startDate)}).field({employees:true,pay:true,time:true,shopId:true,_id:false}).limit(10000).get()).data
+
+        return {consumes,charges}
     }
     
 }

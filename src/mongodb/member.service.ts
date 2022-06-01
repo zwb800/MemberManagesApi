@@ -5,9 +5,10 @@ import { ObjectId } from 'mongodb';
 
 
 export abstract class IMemberService{
+    abstract exists(openid: string)
     abstract import(members)
     abstract refund(id: string)
-    abstract getAllChargeList(startDate: Date, endDate: Date,shopId:string)
+    abstract getAllChargeList(startDate: Date, endDate: Date,showGift:boolean,showPayOnce:boolean,shopId:string)
     abstract get(id:string)
     abstract all(keyword:string,index:number,pageSize:number)
     abstract charge(memberId,amount,card,employees,shopId)
@@ -17,6 +18,9 @@ export abstract class IMemberService{
 
 @Injectable()
 export class MemberService implements IMemberService {
+    exists(openid: string) {
+        throw new Error('Method not implemented.');
+    }
     gift(memberId: any, gifts: any) {
         throw new Error('Method not implemented.');
     }
@@ -26,8 +30,8 @@ export class MemberService implements IMemberService {
     refund(id: string) {
         throw new Error('Method not implemented.');
     }
-    getAllChargeList(startDate: Date, endDate: Date) {
-        
+    getAllChargeList(startDate: Date, endDate: Date,showGift:boolean,showPayOnce:boolean,shopId:string) {
+        throw new Error('Method not implemented.');
     }
     async get(id:string){
         const mongoClient = await connect()

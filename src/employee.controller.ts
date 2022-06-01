@@ -33,5 +33,10 @@ export class EmployeeController{
         return this.employeeService.footer(startDate,endDate,shopId)
     }
 
+    @Get("statistics")
+    async statistics(@Query('year') year:number,@Query('month') month:number){
+        return this.employeeService.statistics(year,month)
+    }
+
 
 }

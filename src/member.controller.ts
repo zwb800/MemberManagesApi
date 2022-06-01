@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query,Headers } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query,Headers, ParseBoolPipe } from '@nestjs/common'
 
 
 import { IMemberService } from './mongodb/member.service'
@@ -27,10 +27,12 @@ export class MemberController{
 
     @Get('all-charge-list')
     async getAllChargeList( @Query('startDate')startDate:Date,
+    @Query('showGift',ParseBoolPipe)showGift:boolean,
+    @Query('showPayOnce',ParseBoolPipe)showPayOnce:boolean,
     @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.memberService.getAllChargeList(startDate,endDate,shopId)
+        return this.memberService.getAllChargeList(startDate,endDate,showGift,showPayOnce,shopId)
     }
 
     @Post("refund")
@@ -41,6 +43,11 @@ export class MemberController{
     @Get('charge-list')
     async getChargeList(@Query('memberId')memberId){
         return this.memberService.getChargeList(memberId)
+    }
+
+    @Get('exists')
+    async exists(@Query('openid') openid){
+        return this.memberService.exists(openid)
     }
 
     @Post('charge')

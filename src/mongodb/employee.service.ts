@@ -3,6 +3,7 @@ import { HeadID } from "src/constant"
 import { connect } from "src/mongodb/db"
 
 export abstract class IEmployeeService{
+    abstract statistics(year:number,month: number)
     abstract work(startDate,endDate,shopId)
     abstract footer(startDate:Date,
         endDate:Date,shopId)
@@ -10,6 +11,9 @@ export abstract class IEmployeeService{
 
 @Injectable()
 export class EmployeeService implements IEmployeeService{
+    statistics(month: number) {
+        throw new Error("Method not implemented.")
+    }
     async work(startDate,endDate){
         const mongoClient = await connect()
         const db = mongoClient.db('MemberManages')

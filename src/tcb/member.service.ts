@@ -6,6 +6,11 @@ import { Sms } from 'src/sms';
 import { connect } from './db';
 @Injectable()
 export class MemberService implements IMemberService {
+    async exists(openid: string) {
+        const db = await connect()
+        const member = (await db.collection('Member').where({openid:openid}).get()).data
+        return member.length>0
+    }
 
     async import(mArr){
         const db = await connect()
@@ -129,18 +134,29 @@ export class MemberService implements IMemberService {
         return result
     }
 
-  async getAllChargeList(startDate: Date, endDate: Date,shopId:string) {
+  async getAllChargeList(startDate: Date, endDate: Date,showGift:boolean,showPayOnce:boolean,shopId:string) {
     const db = connect()
     const chargeItem = db.collection('ChargeItem')
     const cards = await db.collection('PrepaidCard')
     const arrCards = await (await cards.get()).data
     const _ = db.command
-    const arr = (await chargeItem.where(
-        {
-            time:_.lte(endDate).gte(startDate),
-            refund:_.neq(true),
-            shopId:shopId
-        }).orderBy("time","desc").get()).data
+
+    const filter = 
+    {
+        time:_.lte(endDate).gte(startDate),
+        refund:_.neq(true),
+        shopId:shopId
+    }
+        if(showGift){
+
+        }else{
+            filter['pay'] = _.gt(0)
+        }
+        if(showPayOnce){}
+        else{
+            filter['itemId'] = _.neq(null)
+        }
+    const arr = (await chargeItem.where(filter).orderBy("time","desc").get()).data
 
         const arrServiceItems = (await db.collection('ServiceItem').get()).data
 
@@ -154,26 +170,18 @@ export class MemberService implements IMemberService {
                     card = arrCards.find(ac=>ac._id == v.itemId)
                 }
 
-                let product = null
-                if(v.serviceItems){
-                    product = v.serviceItems.map(s=>{
-                    const si = arrServiceItems.find(asi=>asi._id == s.serviceItemId)
-                    return {
-                        name:si.name,
-                        count:s.count
-                    }})
-                }
-                    result.push( {
-                        _id : v._id.toString(),
-                        member:member.name,
-                        card:card?card.label:null,
-                        price:v.price,
-                        time:v.time,
-                        balance:v.balance,
-                        pay:v.pay,
-                        amount:v.amount,
-                        product
-                    })
+                result.push( {
+                    _id : v._id.toString(),
+                    member:member.name,
+                    card:card?card.label:null,
+                    price:v.price,
+                    time:v.time,
+                    balance:v.balance,
+                    pay:v.pay,
+                    amount:v.amount,
+                    serviceItems:v.serviceItems,
+                    employees:v.employees
+                })
                 
                
             }

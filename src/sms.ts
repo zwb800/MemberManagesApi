@@ -27,7 +27,7 @@ export const Sms = {
           TemplateParamSet: templateParams,
         }
         
-        if(process.env.SERVERLESS){
+        // if(process.env.SERVERLESS){
           Sms.client.SendSms(params, function (err, response) {
             if (err) {
               console.log(err)
@@ -35,11 +35,11 @@ export const Sms = {
             }
             console.log(response)
           })
-        }
-        else
-        {
-          console.log(templateParams.toString()+'->'+ phones.toString())
-        }
+        // }
+        // else
+        // {
+        //   console.log(templateParams.toString()+'->'+ phones.toString())
+        // }
         
     },
     consumeSms:(phone:string,memberNo:string,costPrice:number,balance:number)=>{
