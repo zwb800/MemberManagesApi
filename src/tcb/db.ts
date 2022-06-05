@@ -10,7 +10,9 @@ export const connect = ()=>{
 }
 
 export const get = async(name,shopId)=>{
-  const coll =  connect().collection(name)
+  const db = connect()
+  const _ = db.command
+  const coll =  db.collection(name).where({deleted:_.neq(true)})
   let query = null
   if(shopId)
   {

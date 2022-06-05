@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import * as fs from 'fs'
+import {io} from 'socket.io-client'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule,{ 
@@ -9,6 +9,10 @@ async function bootstrap() {
       // }
   });
   app.enableCors()
+
+  const socket = io('wss://service-em8ysfmx-1305763203.sh.apigw.tencentcs.com/release/')
+  // socket.emit('newReservation')
+
   await app.listen(9000);
 }
 bootstrap();

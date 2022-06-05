@@ -10,104 +10,127 @@ export class ConsumeService implements IConsumeService {
     async consume(memberId: string, serviceItems: any, employees: any,shopId:string) {
         const db = await connect()
         const members = db.collection('Member')
-        let m = await (await members.doc(memberId).get()).data[0]
-        const consumes = db.collection('Consumes')
+        const m = await (await members.doc(memberId).get()).data[0]
         const collBalance = db.collection('Balance')
         const _ = db.command
     const balances = await (
       await collBalance.where({ memberId: m._id }).get()
     ).data
 
-        const serviceItemsCollection = db.collection('ServiceItem')
-        const sids = serviceItems.map(s=>s.serviceItemId)
-        const sItems = await (await serviceItemsCollection
-            .where({_id:_.in(sids)}).get()).data
-        let priceSum = 0
+    balances.filter(p=>p.discount).forEach(p=>{
+        m.balance += p.balance
+    })
 
-        let result = null
-        try{
-            await db.runTransaction(async(transaction)=>{
-                for(const s of serviceItems){
-                    let acount = 0//划余额次数
-                    let decount = 0//划次卡次数
-                    const ba = balances.find(b=>b.serviceItemId == s.serviceItemId)
-                    if(ba && ba.balance)//如果还有次数 先划次 否则划余额
-                    {
-                        if(ba.balance >= s.count)//次数足够
-                            decount = s.count
-                        else //次数不足
-                            return await transaction.rollback("insufficient balance")
-        
-                        
-                        if(decount>0){
-                            s.counterCard = true //次卡消费
-                            const b = await transaction.collection('Balance').where({_id:ba._id}).updateAndReturn({
-                                balance:_.inc(decount*-1)
-                            })
-                            if(b.doc.serviceItemId == HeadID){
-                                Sms.consumeCounterCard(m.phone,
-                                    m.no.toString().substring(2),
-                                    decount,
-                                    b.doc.balance)
-                            }
-                            
+    const serviceItemsCollection = db.collection('ServiceItem')
+    const sids = serviceItems.map(s=>s.serviceItemId)
+    const sItems = await (await serviceItemsCollection
+        .where({_id:_.in(sids)}).get()).data
+    let priceSum = 0
+
+    let result = null
+    try{
+        await db.runTransaction(async(transaction)=>{
+            for(const s of serviceItems){
+                let acount = 0//划余额次数
+                let decount = 0//划次卡次数
+                const ba = balances.find(b=>b.serviceItemId == s.serviceItemId)
+                if(ba && ba.balance)//如果还有次数 先划次 否则划余额
+                {
+                    if(ba.balance >= s.count)//次数足够
+                        decount = s.count
+                    else //次数不足
+                        return await transaction.rollback("insufficient balance")
+    
+                    
+                    if(decount>0){
+                        s.counterCard = true //次卡消费
+                        const b = await transaction.collection('Balance').where({_id:ba._id}).updateAndReturn({
+                            balance:_.inc(decount*-1)
+                        })
+                        if(b.doc.serviceItemId == HeadID){
+                            Sms.consumeCounterCard(m.phone,
+                                m.no.toString().substring(2),
+                                decount,
+                                b.doc.balance)
                         }
-                    }
-                    else //没有次数 全部划余额
-                        acount = s.count
-        
-                    if(acount > 0)
-                    {
-                        s.counterCard = false //储值卡消费
-                        const as = sItems.find(asi=>asi._id.toString() == s.serviceItemId)
-                        priceSum += as.price * s.count
                         
                     }
                 }
-                
-                if((m.balance - priceSum)<0)
+                else //没有次数 全部划余额
+                    acount = s.count
+    
+                if(acount > 0)
                 {
-                    result = '余额不足'
-                    await transaction.rollback("insufficient balance")
+                    s.counterCard = false //储值卡消费
+                    const as = sItems.find(asi=>asi._id.toString() == s.serviceItemId)
+                    let price = as.price * s.count
+
+                    const b = balances.find(b=> b.discount && (b.balance > (b.discount * price)))
+
+                    if(b){
+                        price *= b.discount
+                        price = Math.round(price*10) / 10
+                    }
+
+                    priceSum += price
+                    
                 }
-                else
-                {
-                    if(priceSum>0){//扣除余额
-                        const updateResult = await transaction.collection('Member').where({_id:m._id}).updateAndReturn({
+            }
+            
+            if((m.balance - priceSum)<0)
+            {
+                result = '余额不足'
+                await transaction.rollback("insufficient balance")
+            }
+            else
+            {
+                if(priceSum>0){//扣除余额
+                    const b = balances.find(b=> b.discount && (b.balance > priceSum))
+                    let updateResult
+                    if(b){
+                        updateResult = await transaction.collection('Balance').where({_id:b._id}).updateAndReturn({
+                            balance:_.inc(priceSum*-1)})
+                    }
+                    else{
+                        updateResult = await transaction.collection('Member').where({_id:m._id}).updateAndReturn({
                             balance:_.inc(priceSum*-1),
                             consume:_.inc(priceSum)
                         })
-
-                        Sms.consumeSms(m.phone,m.no.toString().substring(2),priceSum,updateResult.doc.balance)
                     }
-        
-                    await transaction.collection('Consumes').add({
-                        memberId:m._id,
-                        serviceItems:serviceItems.map((e)=>{
-                            return {
-                                serviceItemId:e.serviceItemId,
-                                count:e.count,
-                                counterCard:e.counterCard
-                            }
-                        }),
-                        price:priceSum,
-                        employees:employees.map((e)=>{
-                            return { 
-                                employeeId:e.employeeId,
-                                items:e.items
-                            }
-                        }),
-                        time:new Date(),
-                        shopId:shopId
-                    })
+
+                    Sms.consumeSms(m.phone,m.no.toString().substring(2),priceSum,updateResult.doc.balance)
                 }
-            })
-        }catch(err){
-            console.error(err)
-        }
-        
-        return result
+    
+                await transaction.collection('Consumes').add({
+                    memberId:m._id,
+                    serviceItems:serviceItems.map((e)=>{
+                        return {
+                            serviceItemId:e.serviceItemId,
+                            count:e.count,
+                            counterCard:e.counterCard
+                        }
+                    }),
+                    price:priceSum,
+                    employees:employees.map((e)=>{
+                        return { 
+                            employeeId:e.employeeId,
+                            items:e.items
+                        }
+                    }),
+                    time:new Date(),
+                    shopId:shopId
+                })
+            }
+        })
+
     }
+    catch(err){
+        console.error(err)
+    }
+        
+    return result
+    }
+
     async refund(id: string) {
         const db = await connect()
         const _ = db.command
@@ -117,7 +140,7 @@ export class ConsumeService implements IConsumeService {
         const c = (await consumes.doc(id).get()).data[0]
         const m = (await members.doc(c.memberId).get()).data[0]
         const balances = await (await collBalance.where({memberId:m._id}).get()).data
-        let result = ''
+        const result = ''
         await db.runTransaction(async (transaction)=>{
             if(c.price>0){
                 await transaction.collection('Member').doc(c.memberId).update({//退回余额
@@ -175,7 +198,7 @@ export class ConsumeService implements IConsumeService {
 
     async toConsumeList(db:Database.Db,arr){
         const arrServiceItems = (await db.collection('ServiceItem').get()).data
-        const result = new Array()
+        const result = []
         for (const v of arr) {
             const member = (await db.collection('Member')
             .doc(v.memberId).field({name:1}).get()).data[0]

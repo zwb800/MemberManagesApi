@@ -3,6 +3,7 @@ import { get } from "./mongodb/db";
 import axios from "axios"
 import { IReservationService } from "./mongodb/reservation.service";
 import { IMemberService } from "./mongodb/member.service";
+import {io} from "socket.io-client"
 const WX_HOST = 'https://api.weixin.qq.com'
 @Controller('reservation')
 export class ReservationController{
@@ -69,7 +70,9 @@ export class ReservationController{
 
     @Post('add')
     async add(@Body('openid') openid,@Body('time') time:Date,@Body('num') num,@Body('shopId') shopId:string){
-        return await this.reservationService.add(openid,new Date(time),num,shopId)
+        const result = await this.reservationService.add(openid,new Date(time),num,shopId)
+        
+        return result
     }
 
     @Post('cancel')

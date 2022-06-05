@@ -29,6 +29,7 @@ import { StockController } from './stock.controller';
 import { ReservationService } from './tcb/reservation.service';
 import { IReservationService } from './mongodb/reservation.service';
 import { ReservationController } from './reservation.controller';
+import { PushGateway } from './push.gateway';
 
 
 
@@ -44,7 +45,7 @@ import { ReservationController } from './reservation.controller';
     StockController,
     ReservationController
   ],
-  providers: [AppService,
+  providers: [AppService,PushGateway,
     {provide:IMemberService,useClass:dbType == DbType.MongoDb?MemberService:TcbMemberService},
     {provide:IEmployeeService,useClass:dbType == DbType.MongoDb?EmployeeService:TcbEmployeeService},
     {provide:IConsumeService,useClass:dbType == DbType.MongoDb?ConsumeService:TcbConsumeService},

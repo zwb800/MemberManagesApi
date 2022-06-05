@@ -23,9 +23,9 @@ export class MemberService implements IMemberService {
             return
         }
 
-        const balanceArr = new Array()
+        const balanceArr = []
 
-        return await db.runTransaction(async (tran)=>{
+        return await db.runTransaction(async ()=>{
             const insertM = mArr.map(m=>{
                return {
                     no:m.no,
@@ -157,10 +157,7 @@ export class MemberService implements IMemberService {
             filter['itemId'] = _.neq(null)
         }
     const arr = (await chargeItem.where(filter).orderBy("time","desc").get()).data
-
-        const arrServiceItems = (await db.collection('ServiceItem').get()).data
-
-        const result = new Array()
+        const result = []
         for (const v of arr) {
             const member = (await db.collection('Member')
             .doc(v.memberId).field({name:1}).get()).data[0]
@@ -234,12 +231,16 @@ export class MemberService implements IMemberService {
     const m = (await members.doc(id).get()).data[0]
     const _ = db.command
     const arrBalances = await (await balances
-        .where({memberId:m._id}).field({serviceItemId:true,balance:true}).get()).data
+        .where({memberId:m._id}).get()).data
     const sItems = await (await serviceItems.where(
         {_id:_.in(arrBalances.map(p=>p.serviceItemId))
     }).get()).data
 
-    const arrB = arrBalances.map(p=>{
+    arrBalances.filter(p=>p.discount).forEach(p=>{
+        m.balance += p.balance
+    })
+
+    const arrB = arrBalances.filter(p=>p.serviceItemId).map(p=>{
         const s = sItems.find(s=>s._id == (p.serviceItemId))
         return {
             serviceItemName:s.name,
@@ -306,7 +307,7 @@ export class MemberService implements IMemberService {
 
     let balance = amount
     let pay = amount
-    let arrBalances = Array()
+    let arrBalances = []
 
     if(prepayCard){
         pay += prepayCard.price
@@ -314,19 +315,26 @@ export class MemberService implements IMemberService {
             balance += (prepayCard.price+prepayCard.gift)
         }
 
+        if(prepayCard.discount){
+            arrBalances = arrBalances.concat({
+                discount:prepayCard.discount,
+                balance:prepayCard.price
+            })
+        }
+
         if(prepayCard.serviceItemIds){
-             arrBalances = prepayCard.serviceItemIds.map(p=>{
+             arrBalances = arrBalances.concat(prepayCard.serviceItemIds.map(p=>{
                  return {
                     serviceItemId:p.serviceItemId,
                     balance:p.count
                 }
-            })
+            }))
         }
     }
 
     let accountBalance = 0
     return await db.runTransaction(async(tran)=>{
-        let balancesOld = Array()
+        let balancesOld = []
         
         if(member._id && member._id!="")
         {
@@ -368,9 +376,13 @@ export class MemberService implements IMemberService {
         
         //插入次卡余额
         for (const b of arrBalances) {
-            if(balancesOld.some(bo=>bo.serviceItemId ==b.serviceItemId))
-            {
-                const updateResult = await tran.collection("Balance").where({memberId:member._id,serviceItemId:b.serviceItemId}).updateAndReturn(
+
+            if(b.discount && balancesOld.some(bo=>bo.discount == b.discount)){
+                await tran.collection("Balance").where({memberId:member._id,discount:b.discount}).updateAndReturn(
+                    {balance:_.inc(b.balance)})
+            } else if(b.serviceItemId && balancesOld.some(bo=>bo.serviceItemId == b.serviceItemId)){
+
+                await tran.collection("Balance").where({memberId:member._id,serviceItemId:b.serviceItemId}).updateAndReturn(
                     {balance:_.inc(b.balance)})
             }
             else
