@@ -3,9 +3,10 @@ import { ObjectId } from "mongodb";
 import { connect } from "./db";
 
 export abstract class IConsumeService{
+    abstract getConsumeListCount(memberId: any)
     abstract consume(memberId:string,serviceItems,employees,shopId)
     abstract refund(id:string)
-    abstract getConsumeList(memberId)
+    abstract getConsumeList(memberId,start:number,count:number)
     abstract getAllConsumeList(
         startDate:Date,
         endDate:Date,shopId:string)
@@ -14,6 +15,9 @@ export abstract class IConsumeService{
 
 @Injectable()
 export class ConsumeService implements IConsumeService{
+    getConsumeListCount(memberId: any) {
+        throw new Error("Method not implemented.");
+    }
 
     async consume(
         memberId:string,
@@ -138,7 +142,7 @@ export class ConsumeService implements IConsumeService{
         const cursorItems = await serviceItems.find()
         const arrServiceItems = await cursorItems.toArray()
         const members = db.collection('Member')
-        const result = new Array()
+        const result = []
         for (const v of arr) {
             const member = await members.findOne({_id:v.memberId},{projection:{name:1}})
             result.push( {

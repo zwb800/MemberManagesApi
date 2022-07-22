@@ -167,7 +167,7 @@ export class ConsumeService implements IConsumeService {
 
         return result
     }
-    async getConsumeList(memberId: any) {
+    async getConsumeList(memberId: any,start:number,count:number) {
         const db = connect()
         const consumes = db.collection('Consumes')
         const _ = db.command
@@ -176,10 +176,22 @@ export class ConsumeService implements IConsumeService {
                 memberId:memberId,
                 refund:_.neq(true)
             })
-            .orderBy("time","desc").get()).data
+            .orderBy("time","desc").skip(start).limit(count).get()).data
  
         const result = await this.toConsumeList(db,arr)
         return result
+    }
+
+    async getConsumeListCount(memberId: any):Promise<number> {
+        const db = connect()
+        const consumes = db.collection('Consumes')
+        const _ = db.command
+        return  (await consumes.where(
+            {
+                memberId:memberId,
+                refund:_.neq(true)
+            })
+            .count()).total
     }
     async getAllConsumeList(startDate: Date, endDate: Date,shopId:string) {
         const db = connect()

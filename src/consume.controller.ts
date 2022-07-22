@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Query, Req } from '@nestjs/common'
 import { ObjectId } from 'bson'
 import { IConsumeService } from './mongodb/consume.service'
 
@@ -21,8 +21,13 @@ export class ConsumeController {
     }
 
     @Get()
-    async getConsumeList(@Query("memberId") memberId){
-        return this.consumeService.getConsumeList(memberId)
+    async getConsumeList(@Query("memberId") memberId,@Query("start",ParseIntPipe) start:number,@Query("count",ParseIntPipe) count:number){
+        return this.consumeService.getConsumeList(memberId,start,count)
+    }
+
+    @Get("list_count")
+    async getConsumeListCount(@Query("memberId") memberId){
+        return this.consumeService.getConsumeListCount(memberId)
     }
 
     @Get("getAllConsumeList")
