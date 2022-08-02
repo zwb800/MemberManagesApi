@@ -236,14 +236,22 @@ export class MemberService implements IMemberService {
         {_id:_.in(arrBalances.map(p=>p.serviceItemId))
     }).get()).data
 
-    arrBalances.filter(p=>p.discount).forEach(p=>{
-        m.balance += p.balance
-    })
+    // arrBalances.filter(p=>p.discount).forEach(p=>{
+    //     m.balance += p.balance
+    // })
 
-    const arrB = arrBalances.filter(p=>p.serviceItemId).map(p=>{
-        const s = sItems.find(s=>s._id == (p.serviceItemId))
+    const arrB = arrBalances.map(p=>{
+        let label = ''
+        if(p.serviceItemId){
+            const s = sItems.find(s=>s._id == (p.serviceItemId))
+            label = s.name
+        }
+        else if(p.discount){
+            label = p.discount*10+'折卡'
+        }
+        
         return {
-            serviceItemName:s.name,
+            serviceItemName:label,
             balance:p.balance
         }
     })

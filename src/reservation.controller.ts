@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query,Headers } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query,Headers, DefaultValuePipe } from "@nestjs/common";
 import { get } from "./mongodb/db";
 import axios from "axios"
 import { IReservationService } from "./mongodb/reservation.service";
@@ -69,8 +69,8 @@ export class ReservationController{
     }
 
     @Post('add')
-    async add(@Body('openid') openid,@Body('time') time:Date,@Body('num') num,@Body('shopId') shopId:string){
-        const result = await this.reservationService.add(openid,new Date(time),num,shopId)
+    async add(@Body('openid') openid,@Body('time') time:Date,@Body('num') num,@Body('remark') remark,@Body('shopId') shopId:string){
+        const result = await this.reservationService.add(openid,new Date(time),num,shopId,remark)
         
         return result
     }

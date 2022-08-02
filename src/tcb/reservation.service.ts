@@ -18,16 +18,20 @@ export class ReservationService implements IReservationService {
         const reservations =  (await db.collection('Reservation').where({shopId,time:_.gte(today),deleted:_.eq(null)}).orderBy('time','asc').get()).data
         const result = []
         for (const r of reservations) {
-            const member = (await db.collection('Member')
-            .doc(r.memberId).field({name:1,phone:1,}).get()).data[0]
-            if(member){
-                result.push( {
-                    _id : r._id.toString(),
-                    member,
-                    time:r.time,
-                    num:r.num
-                })
+            let member = null
+            if(r.memberId){
+                member = (await db.collection('Member')
+                .doc(r.memberId).field({name:1,phone:1,}).get()).data[0]
             }
+           
+            result.push( {
+                _id : r._id.toString(),
+                member,
+                time:r.time,
+                num:r.num,
+                remark: r.remark,
+                create_time:r.create_time,
+            })
            
         }
         return result
@@ -41,11 +45,16 @@ export class ReservationService implements IReservationService {
         }
         return false
     }
-    async add(openid: string, time: Date, num: number,shopId:string) {
+    async add(openid: string, time: Date, num: number,shopId:string,remark:string) {
         const db = await connect()
-        const member = (await db.collection('Member').where({openid:openid}).get()).data
-        if(member.length>0){
-            return await db.collection('Reservation').add({time,num,memberId:member[0]._id,shopId})
+        if(openid){
+            const member = (await db.collection('Member').where({openid}).get()).data
+            if(member.length>0){
+                return await db.collection('Reservation').add({time,num,memberId:member[0]._id,shopId,remark,create_time:new Date()})
+            }
+        }
+        else{
+            return await db.collection('Reservation').add({time,num,shopId,remark,create_time:new Date()})
         }
        
     }

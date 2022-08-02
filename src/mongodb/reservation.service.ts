@@ -7,7 +7,7 @@ export abstract class IReservationService{
     abstract updateOpenId(openid: string, phone: string)
     abstract cancel(openid: string)
     abstract getByOpenID(openid?: string)
-    abstract add(openid:string,time:Date,num:number,shopId:string)
+    abstract add(openid:string,time:Date,num:number,shopId:string,remark:string)
 }
 
 @Injectable()
