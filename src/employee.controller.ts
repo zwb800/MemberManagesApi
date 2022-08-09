@@ -10,7 +10,7 @@ export class EmployeeController{
 
     @Get()
     async get(){
-        return await get('Employee')
+        return await get('Employee',true)
     }
 
     @Get('work')

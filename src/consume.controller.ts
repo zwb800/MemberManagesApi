@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Query, Req } from '@nestjs/common'
-import { ObjectId } from 'bson'
 import { IConsumeService } from './mongodb/consume.service'
 
 @Controller('consume')

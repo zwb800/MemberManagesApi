@@ -16,7 +16,7 @@ export class StockController {
 
     @Get()
     async getAll(@Headers('shopId') shopId:string){
-        return await get('Stock',shopId)
+        return await get('Stock',false,shopId)
     }
 
     @Post()

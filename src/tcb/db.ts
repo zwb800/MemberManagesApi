@@ -9,10 +9,10 @@ export const connect = ()=>{
   return app.database();
 }
 
-export const get = async(name,shopId)=>{
+export const get = async(name,includeDeleted = false,shopId)=>{
   const db = connect()
   const _ = db.command
-  const coll =  db.collection(name).where({deleted:_.neq(true)})
+  const coll =  db.collection(name)
   let query = null
   if(shopId)
   {
@@ -20,6 +20,9 @@ export const get = async(name,shopId)=>{
   }
   else{
     query = coll
+  }
+  if(!includeDeleted){
+    query = query.where({deleted:_.neq(true)})
   }
 
   return (await query.get()).data

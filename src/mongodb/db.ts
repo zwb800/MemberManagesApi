@@ -9,10 +9,10 @@ export const connect = async()=>{
     return mongoClient
 }
 
-export const get = async(name,shopId = null)=>{
+export const get = async(name,includeDeleted = false,shopId = null)=>{
     if(dbType == DbType.TencentCouldBase)
     {
-        return TcbGet(name,shopId)
+        return TcbGet(name,includeDeleted,shopId)
     }
     else
     {
