@@ -68,8 +68,7 @@ export class ConsumeService implements IConsumeService {
                     const b = balances.find(b=> b.discount && (b.balance > (b.discount * price)))
 
                     if(b){
-                        price *= b.discount
-                        price = Math.round(price*10) / 10
+                        price = b.discount * 10 * price / 10
                     }
 
                     priceSum += price
