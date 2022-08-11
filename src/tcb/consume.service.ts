@@ -63,34 +63,37 @@ export class ConsumeService implements IConsumeService {
                 {
                     s.counterCard = false //储值卡消费
                     const as = sItems.find(asi=>asi._id.toString() == s.serviceItemId)
-                    let price = as.price * s.count
+                    const price = as.price * s.count
 
-                    const b = balances.find(b=> b.discount && (b.balance > (b.discount * price)))
+                    // const b = balances.find(b=> b.discount && (b.balance > (b.discount * price)))
 
-                    if(b){
-                        price = b.discount * 10 * price / 10
-                    }
+                    
+                    // if(b){
+                    //     price = b.discount * 10 * price / 10
+                    //     s.discount = b.discount
+                    // console.log(b.discount * 10 * price / 10 + 38.4)
+                    // }
 
                     priceSum += price
+                    
                     
                 }
             }
             
-            if((m.balance - priceSum)<0)
-            {
-                result = '余额不足'
-                await transaction.rollback("insufficient balance")
-            }
-            else
-            {
+         
                 if(priceSum>0){//扣除余额
-                    const b = balances.find(b=> b.discount && (b.balance > priceSum))
+                    const b = balances.find(b=> b.discount && (b.balance > (priceSum * b.discount)))
                     let updateResult
                     if(b){
+                        priceSum = b.discount * 10 * priceSum / 10
+                        const balance = parseFloat((b.balance - priceSum).toFixed(1))
                         updateResult = await transaction.collection('Balance').where({_id:b._id}).updateAndReturn({
-                            balance:_.inc(priceSum*-1)})
+                            balance})
                     }
-                    else{
+                    else if((m.balance - priceSum)<0) {
+                        result = '余额不足'
+                        await transaction.rollback("insufficient balance")
+                    }else{
                         updateResult = await transaction.collection('Member').where({_id:m._id}).updateAndReturn({
                             balance:_.inc(priceSum*-1),
                             consume:_.inc(priceSum)
@@ -106,7 +109,8 @@ export class ConsumeService implements IConsumeService {
                         return {
                             serviceItemId:e.serviceItemId,
                             count:e.count,
-                            counterCard:e.counterCard
+                            counterCard:e.counterCard,
+                            discount:e.discount?1:e.discount
                         }
                     }),
                     price:priceSum,
@@ -119,7 +123,7 @@ export class ConsumeService implements IConsumeService {
                     time:new Date(),
                     shopId:shopId
                 })
-            }
+            
         })
 
     }
