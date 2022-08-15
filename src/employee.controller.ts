@@ -1,16 +1,14 @@
 import { Controller, Get, Query,Headers } from "@nestjs/common";
-import { HeadID } from "./constant";
-import { get,connect } from "./mongodb/db";
-import { IEmployeeService } from "./mongodb/employee.service";
+import { EmployeeService } from "./prisma/employee.service";
 
 
 @Controller('employee')
 export class EmployeeController{
-    constructor(private readonly employeeService:IEmployeeService){}
+    constructor(private readonly employeeService:EmployeeService){}
 
     @Get()
     async get(){
-        return await get('Employee',true)
+        return await this.employeeService.list()
     }
 
     @Get('work')
@@ -19,7 +17,7 @@ export class EmployeeController{
         startDate = new Date(startDate)
         endDate = new Date(endDate)
         
-        return this.employeeService.work(startDate,endDate,shopId)
+        return this.employeeService.work(startDate,endDate,parseInt(shopId))
     }
 
     @Get("footer")
@@ -30,7 +28,7 @@ export class EmployeeController{
         startDate = new Date(startDate)
         endDate = new Date(endDate)
 
-        return this.employeeService.footer(startDate,endDate,shopId)
+        return this.employeeService.footer(startDate,endDate,parseInt(shopId))
     }
 
     @Get("statistics")

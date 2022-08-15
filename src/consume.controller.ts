@@ -1,21 +1,21 @@
 import { Body, Controller, Get, Headers, Param, ParseIntPipe, Post, Query, Req } from '@nestjs/common'
-import { IConsumeService } from './mongodb/consume.service'
+import { ConsumeService } from './prisma/consume.service'
 
 @Controller('consume')
 export class ConsumeController {
-    constructor(private readonly consumeService:IConsumeService){}
+    constructor(private readonly consumeService:ConsumeService){}
     @Post()
     async consume(
-        @Body('memberId') memberId:string,
+        @Body('memberId',new ParseIntPipe()) memberId:number,
         @Body('serviceItems') serviceItems,
         @Body('employees')employees,
         @Headers('shopId') shopId:string){
         
-        return this.consumeService.consume(memberId,serviceItems,employees,shopId)
+        return this.consumeService.consume(memberId,serviceItems,employees,parseInt(shopId))
     }
 
     @Post("refund")
-    async refund(@Body("id")id:string){
+    async refund(@Body("id",new ParseIntPipe())id:number){
         return this.consumeService.refund(id)
     }
 

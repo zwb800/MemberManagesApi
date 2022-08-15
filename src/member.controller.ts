@@ -1,14 +1,14 @@
-import { Body, Controller, Get, Post, Query,Headers, ParseBoolPipe } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query,Headers, ParseBoolPipe, ParseIntPipe } from '@nestjs/common'
+import { MemberService } from './prisma/member.service'
 
 
-import { IMemberService } from './mongodb/member.service'
 
 
 
 @Controller('member')
 export class MemberController{
 
-    constructor(private readonly memberService: IMemberService) {}
+    constructor(private readonly memberService: MemberService) {}
 
     @Get('get')
     async get (@Query('id')id){
@@ -36,7 +36,7 @@ export class MemberController{
     }
 
     @Post("refund")
-    async refund(@Body("id")id:string){
+    async refund(@Body("id",new ParseIntPipe())id:number){
         return this.memberService.refund(id)
     }
 
@@ -52,14 +52,14 @@ export class MemberController{
 
     @Post('charge')
     async charge(
-        @Body('memberId') memberId,
+        @Body('memberId',new ParseIntPipe()) memberId,
         @Body('amount')amount,
         @Body('card')card,
         @Body('employees')employees,
         @Headers('shopId') shopId){
         // memberId = ObjectId.createFromHexString(memberId)
         // card = card?ObjectId.createFromHexString(card._id):card
-        await this.memberService.charge({_id:memberId},amount,card,employees,shopId)
+        await this.memberService.charge({id:memberId},amount,card,employees,shopId)
         return true
     }
 

@@ -1,37 +1,38 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ConsumeController } from './consume.controller';
-import { EmployeeController } from './employee.controller';
-import { MemberController } from './member.controller';
-import { IMemberService } from './mongodb/member.service';
-import { PrepaidCardController } from './prepaidcard.controller';
-import { ServiceItemController } from './serviceitem.controller';
-
-
-
-
+import { Module } from '@nestjs/common'
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
+import { ConsumeController } from './consume.controller'
+import { EmployeeController } from './employee.controller'
+import { MemberController } from './member.controller'
+// import { IMemberService } from './mongodb/member.service'
+import { PrepaidCardController } from './prepaidcard.controller'
+import { ServiceItemController } from './serviceitem.controller'
 
 // //MongoDb数据库
-import { MemberService } from './mongodb/member.service';
-import { EmployeeService, IEmployeeService } from './mongodb/employee.service';
-import { ConsumeService, IConsumeService } from './mongodb/consume.service';
+// import { MemberService } from './mongodb/member.service'
+// import { EmployeeService, IEmployeeService } from './mongodb/employee.service'
+// import { ConsumeService, IConsumeService } from './mongodb/consume.service'
 
 //腾讯TCB数据库
-import { MemberService as TcbMemberService } from './tcb/member.service';
-import { EmployeeService as TcbEmployeeService } from './tcb/employee.service';
-import { ConsumeService as TcbConsumeService } from './tcb/consume.service';
+// import { MemberService as TcbMemberService } from './tcb/member.service'
+// import { EmployeeService as TcbEmployeeService } from './tcb/employee.service'
+// import { ConsumeService as TcbConsumeService } from './tcb/consume.service'
 
-
-import { DbType, dbType } from './utils';
-import { IStockService, StockService } from './tcb/stock.service';
-import { StockController } from './stock.controller';
-import { ReservationService } from './tcb/reservation.service';
-import { IReservationService } from './mongodb/reservation.service';
-import { ReservationController } from './reservation.controller';
-import { PushGateway } from './push.gateway';
-
-
+import { DbType, dbType } from './utils'
+import { IStockService, StockService } from './prisma/stock.service'
+import { StockController } from './stock.controller'
+// import { ReservationService } from './tcb/reservation.service'
+// import { IReservationService } from './mongodb/reservation.service'
+import { ReservationController } from './reservation.controller'
+import { PushGateway } from './push.gateway'
+import { PrismaService } from './prisma.service'
+import { ServiceItemService } from './prisma/serviceitem.service'
+// import { IServiceItemService } from './mongodb/db'
+import { EmployeeService, EmployeeService as PrisamEmployeeService } from './prisma/employee.service'
+import { MemberService } from './prisma/member.service'
+import { ConsumeService } from './prisma/consume.service'
+import { ReservationService } from './prisma/reservation.service'
+import { PrepaidCardService } from './prisma/prepaidcard.service'
 
 @Module({
   imports: [],
@@ -43,14 +44,25 @@ import { PushGateway } from './push.gateway';
     EmployeeController,
     PrepaidCardController,
     StockController,
-    ReservationController
+    ReservationController,
   ],
-  providers: [AppService,PushGateway,
-    {provide:IMemberService,useClass:dbType == DbType.MongoDb?MemberService:TcbMemberService},
-    {provide:IEmployeeService,useClass:dbType == DbType.MongoDb?EmployeeService:TcbEmployeeService},
-    {provide:IConsumeService,useClass:dbType == DbType.MongoDb?ConsumeService:TcbConsumeService},
-    {provide:IStockService,useClass:dbType == DbType.MongoDb?StockService:StockService},
-    {provide:IReservationService,useClass:dbType==DbType.MongoDb?ReservationService:ReservationService}
+  providers: [
+    AppService,
+    PushGateway,
+    PrismaService,
+    ServiceItemService,
+    MemberService,
+    EmployeeService,
+    ConsumeService,
+    StockService,
+    ReservationService,
+    PrepaidCardService
+    // { provide: IServiceItemService, useClass: ServiceItemService },
+    // { provide: IMemberService, useClass: MemberService },
+    // { provide: IEmployeeService, useClass: PrisamEmployeeService },
+    // { provide: IConsumeService, useClass: TcbConsumeService },
+    // { provide: IStockService, useClass: StockService },
+    // { provide: IReservationService, useClass: ReservationService },
   ],
 })
 export class AppModule {}

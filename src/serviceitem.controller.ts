@@ -1,10 +1,14 @@
-import { Controller, Get } from "@nestjs/common";
-import { get } from "./mongodb/db";
+import { Controller, Get } from "@nestjs/common"
+import { ServiceItemService } from "./prisma/serviceitem.service"
 
 @Controller('serviceitem')
 export class ServiceItemController{
+    constructor(private serviceItemService:ServiceItemService){
+
+
+    }
     @Get()
     async get(){
-        return await get('ServiceItem')
+        return await this.serviceItemService.list()
     }
 }

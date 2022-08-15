@@ -1,10 +1,12 @@
 import { Controller, Get } from "@nestjs/common";
-import { get } from "./mongodb/db";
+import { PrepaidCardService } from "./prisma/prepaidcard.service";
 
 @Controller('prepaidcard')
 export class PrepaidCardController{
+    constructor(private prepaidCardService:PrepaidCardService){}
+
     @Get()
     async get(){
-        return await get('PrepaidCard')
+        return await this.prepaidCardService.list()
     }
 }

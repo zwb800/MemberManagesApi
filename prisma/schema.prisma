@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model employee {
+  id                  Int                   @id @default(autoincrement())
+  name                String
+  chargeItem2employee chargeItem2employee[]
+}
+
+model serviceItem {
+  id        Int    @id @default(autoincrement())
+  name      String
+  shortName String
+  price     Int
+
+  prepaidCard2serviceItem      prepaidCard2serviceItem[]
+  consume2serviceItem          consume2serviceItem[]
+  consume2employee             consume2employee[]
+  consume2employee2serviceItem consume2employee2serviceItem[]
+  balance                      balance[]
+  chargeItem2serviceItem       chargeItem2serviceItem[]
+}
+
+model stock {
+  id       Int        @id @default(autoincrement())
+  count    Int
+  name     String
+  shopId   Int
+  unit     String
+  stockLog stockLog[]
+}
+
+model stockLog {
+  id      Int      @id @default(autoincrement())
+  count   Int
+  stockId Int
+  stock   stock    @relation(fields: [stockId], references: [id])
+  time    DateTime
+}
+
+model prepaidCard {
+  id      Int     @id @default(autoincrement())
+  deleted Boolean @default(false)
+  label   String
+  price   Int
+
+  prepaidCard2serviceItem prepaidCard2serviceItem[]
+  chargeItem              chargeItem[]
+}
+
+model prepaidCard2serviceItem {
+  id            Int         @id @default(autoincrement())
+  prepaidCardId Int
+  prepaidCard   prepaidCard @relation(fields: [prepaidCardId], references: [id])
+  serviceItemId Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  count         Int
+}
+
+model member {
+  id          Int           @id @default(autoincrement())
+  name        String
+  phone       String
+  consume     Decimal
+  balance     Decimal
+  no          String
+  openId      String
+  shopId      Int
+  newCardTime DateTime
+  consumes    consume[]
+  chargeItem  chargeItem[]
+  balances    balance[]
+  reservation reservation[]
+}
+
+model consume {
+  id        Int                   @id @default(autoincrement())
+  memberId  Int
+  member    member                @relation(fields: [memberId], references: [id])
+  price     Decimal
+  shopId    Int
+  time      DateTime
+  refund    Boolean?
+  items     consume2serviceItem[]
+  employees consume2employee[]
+}
+
+model consume2employee {
+  id         Int                            @id @default(autoincrement())
+  consumeId  Int
+  consume    consume                        @relation(fields: [consumeId], references: [id])
+  employeeId Int
+  employee   serviceItem                    @relation(fields: [employeeId], references: [id])
+  items      consume2employee2serviceItem[]
+}
+
+model consume2employee2serviceItem {
+  id                 Int              @id @default(autoincrement())
+  consume2employeeId Int
+  consume2employee   consume2employee @relation(fields: [consume2employeeId], references: [id])
+  serviceItemId      Int
+  serviceItem        serviceItem      @relation(fields: [serviceItemId], references: [id])
+}
+
+model consume2serviceItem {
+  id            Int         @id @default(autoincrement())
+  consumeId     Int
+  consume       consume     @relation(fields: [consumeId], references: [id])
+  serviceItemId Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  count         Int
+  counterCard   Boolean
+}
+
+model chargeItem {
+  id       Int          @id @default(autoincrement())
+  pay      Decimal
+  amount   Decimal
+  balance  Decimal
+  itemId   Int?
+  card     prepaidCard? @relation(fields: [itemId], references: [id])
+  shopId   Int
+  time     DateTime
+  memberId Int
+  refund   Boolean?
+  member   member       @relation(fields: [memberId], references: [id])
+
+  employees    chargeItem2employee[]
+  serviceItems chargeItem2serviceItem[]
+}
+
+model chargeItem2employee {
+  id         Int        @id @default(autoincrement())
+  chargeId   Int
+  charge     chargeItem @relation(fields: [chargeId], references: [id])
+  employeeId Int
+  employee   employee   @relation(fields: [employeeId], references: [id])
+}
+
+model chargeItem2serviceItem {
+  id            Int         @id @default(autoincrement())
+  chargeId      Int
+  charge        chargeItem  @relation(fields: [chargeId], references: [id])
+  serviceItemId Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  count         Int
+}
+
+model balance {
+  id            Int         @id @default(autoincrement())
+  memberId      Int
+  member        member      @relation(fields: [memberId], references: [id])
+  serviceItemId Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  balance       Decimal
+  discount      Decimal?
+}
+
+model reservation {
+  id          Int      @id @default(autoincrement())
+  num         Int
+  time        DateTime
+  create_time DateTime
+  remark      String
+  shopId      Int
+  deleted     Boolean
+  memberId    Int?
+  member      member?  @relation(fields: [memberId], references: [id])
+}
+
+model reservationAvailable {
+  id   Int      @id @default(autoincrement())
+  num  Int
+  time DateTime
+}
