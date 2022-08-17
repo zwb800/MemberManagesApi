@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions"]
 }
 
 datasource db {
@@ -9,12 +10,16 @@ datasource db {
 
 model employee {
   id                  Int                   @id @default(autoincrement())
+  oid                 String
   name                String
+  shopId              Int
+  deleted             Boolean               @default(false)
   chargeItem2employee chargeItem2employee[]
 }
 
 model serviceItem {
   id        Int    @id @default(autoincrement())
+  oid       String
   name      String
   shortName String
   price     Int

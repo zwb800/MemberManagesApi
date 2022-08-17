@@ -38,3 +38,4 @@ lerna-debug.log*
 mm.db
 prisma/migrations
 mm.db-journal
+*.sql

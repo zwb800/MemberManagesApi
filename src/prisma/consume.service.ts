@@ -23,11 +23,11 @@ export class ConsumeService {
     })
     const balances = m.balances
 
-    balances
-      .filter((p) => p.discount)
-      .forEach((p) => {
-        m.balance = p.balance.add(m.balance)
-      })
+    // balances
+    //   .filter((p) => p.discount.lessThan(1))
+    //   .forEach((p) => {
+    //     m.balance = p.balance.add(m.balance)
+    //   })
 
     const sids = serviceItems.map((s) => s.serviceItemId)
     const sItems = await this.prismaService.serviceItem.findMany({
@@ -37,112 +37,114 @@ export class ConsumeService {
 
     let result = null
     try {
-      for (const s of serviceItems) {
-        let acount = 0 //划余额次数
-        let decount = 0 //划次卡次数
-        const ba = balances.find((b) => b.serviceItemId == s.serviceItemId)
-        if (ba && ba.balance) {
-          //如果还有次数 先划次 否则划余额
-          if (ba.balance.toNumber() >= s.count)
-            //次数足够
-            decount = s.count
-          //次数不足
-          else return 'insufficient balance'
+      this.prismaService.$transaction(async (prismaService) => {
+        for (const s of serviceItems) {
+          let acount = 0 //划余额次数
+          let decount = 0 //划次卡次数
+          const ba = balances.find((b) => b.serviceItemId == s.serviceItemId)
+          if (ba && ba.balance) {
+            //如果还有次数 先划次 否则划余额
+            if (ba.balance.toNumber() >= s.count)
+              //次数足够
+              decount = s.count
+            //次数不足
+            else return 'insufficient balance'
 
-          if (decount > 0) {
-            s.counterCard = true //次卡消费
+            if (decount > 0) {
+              s.counterCard = true //次卡消费
 
-            const b = await this.prismaService.balance.update({
-              where: { id: ba.id },
-              data: { balance: { decrement: decount } },
-            })
+              const b = await prismaService.balance.update({
+                where: { id: ba.id },
+                data: { balance: { decrement: decount } },
+              })
 
-            if (b.serviceItemId == HeadID) {
-              Sms.consumeCounterCard(
-                m.phone,
-                m.no.toString().substring(2),
-                decount,
-                b.balance.toNumber(),
-              )
+              if (b.serviceItemId == HeadID) {
+                Sms.consumeCounterCard(
+                  m.phone,
+                  m.no.toString().substring(2),
+                  decount,
+                  b.balance.toNumber(),
+                )
+              }
             }
+          } //没有次数 全部划余额
+          else acount = s.count
+
+          if (acount > 0) {
+            s.counterCard = false //储值卡消费
+            const as = sItems.find((asi) => asi.id == s.serviceItemId)
+            const price = as.price * s.count
+            priceSum += price
           }
-        } //没有次数 全部划余额
-        else acount = s.count
-
-        if (acount > 0) {
-          s.counterCard = false //储值卡消费
-          const as = sItems.find((asi) => asi.id == s.serviceItemId)
-          const price = as.price * s.count
-          priceSum += price
         }
-      }
 
-      if (priceSum > 0) {
-        //扣除余额
-        const b = balances.find(
-          (b) =>
-            b.discount &&
-            b.balance.toNumber() > priceSum * b.discount.toNumber(),
-        )
-        let updateResult
-        if (b) {
-          priceSum = (b.discount.toNumber() * 10 * priceSum) / 10
-          const balance = parseFloat(
-            (b.balance.toNumber() - priceSum).toFixed(1),
+        if (priceSum > 0) {
+          //扣除余额
+          const b = balances.find(
+            (b) =>
+              b.discount.lessThan(1) &&
+              b.balance.toNumber() > priceSum * b.discount.toNumber(),
           )
-          updateResult = await this.prismaService.balance.update({
-            where: { id: b.id },
-            data: { balance },
-          })
-        } else if (m.balance.toNumber() - priceSum < 0) {
-          result = '余额不足'
-          return 'insufficient balance'
-        } else {
-          updateResult = await this.prismaService.member.update({
-            where: { id: m.id },
-            data: {
-              balance: { decrement: priceSum },
-              consume: { increment: priceSum },
-            },
-          })
+          let updateResult
+          if (b) {//折扣卡余额足够
+            priceSum = (b.discount.toNumber() * 10 * priceSum) / 10
+            const balance = parseFloat(
+              (b.balance.toNumber() - priceSum).toFixed(1),
+            )
+            updateResult = await prismaService.balance.update({
+              where: { id: b.id },
+              data: { balance },
+            })
+          } else if (m.balance.toNumber() < priceSum) {
+            result = '余额不足'
+            return 'insufficient balance'
+          } else {//划储值卡余额
+            updateResult = await prismaService.member.update({
+              where: { id: m.id },
+              data: {
+                balance: { decrement: priceSum },
+                consume: { increment: priceSum },
+              },
+            })
+          }
+
+          Sms.consumeSms(
+            m.phone,
+            m.no.toString().substring(2),
+            priceSum,
+            updateResult.balance,
+          )
         }
 
-        Sms.consumeSms(
-          m.phone,
-          m.no.toString().substring(2),
-          priceSum,
-          updateResult.doc.balance,
-        )
-      }
-
-      await this.prismaService.consume.create({
-        data: {
-          memberId: m.id,
-          items: {
-            create: serviceItems.map((e) => {
-              return {
-                serviceItemId: e.serviceItemId,
-                count: e.count,
-                counterCard: e.counterCard,
-              }
-            }),
+        await prismaService.consume.create({
+          data: {
+            memberId: m.id,
+            items: {
+              create: serviceItems.map((e) => {
+                return {
+                  serviceItemId: e.serviceItemId,
+                  count: e.count,
+                  counterCard: e.counterCard,
+                }
+              }),
+            },
+            price: priceSum,
+            employees: {
+              create: employees.map((e) => {
+                return {
+                  employeeId: e.employeeId,
+                  items: {
+                    create: e.items.map((ei) => {
+                      return { serviceItemId: ei }
+                    }),
+                  },
+                }
+              }),
+            },
+            time: new Date(),
+            shopId,
           },
-          price: priceSum,
-          employees: {
-            create: employees.map((e) => {
-              return {
-                employeeId: e.employeeId,
-                items: {
-                  create: e.items.map((ei) => {
-                    return { serviceItemId: ei }
-                  }),
-                },
-              }
-            }),
-          },
-          time: new Date(),
-          shopId,
-        },
+        })
       })
     } catch (err) {
       console.error(err)
