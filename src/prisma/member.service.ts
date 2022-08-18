@@ -134,7 +134,7 @@ export class MemberService {
 
     const filter = {
       time: { lte: endDate, gte: startDate },
-      NOT: { refund: true },
+      OR: [{ refund: false }, { refund: null }],
       shopId,
     }
     if (showGift) {
@@ -149,8 +149,10 @@ export class MemberService {
     const arr = await this.prismaService.chargeItem.findMany({
       include: {
         member: { select: { name: true } },
-        serviceItems: true,
-        employees: true,
+        serviceItems: {
+          select: { serviceItem: { select: { name: true } }, count: true },
+        },
+        employees: { select: { employeeId: true } },
         card: true,
       },
       where: filter,
@@ -171,11 +173,13 @@ export class MemberService {
           card: card ? card.label : null,
           //   price: v.price,
           time: v.time,
-          balance: v.balance,
-          pay: v.pay,
-          amount: v.amount,
-          serviceItems: v.serviceItems,
-          employees: v.employees,
+          balance: v.balance.toNumber(),
+          pay: v.pay.toNumber(),
+          amount: v.amount.toNumber(),
+          serviceItems: v.serviceItems.map((s) => {
+            return { count: s.count, name: s.serviceItem.name }
+          }),
+          employees: v.employees.map(e=>e.employeeId),
         })
       }
     }
@@ -186,7 +190,7 @@ export class MemberService {
   async getChargeList(memberId) {
     const citems = await this.prismaService.chargeItem.findMany({
       include: { card: true, serviceItems: { include: { serviceItem: true } } },
-      where: { memberId: memberId, NOT: { refund: true } },
+      where: { memberId, OR: [{ refund: false }, { refund: null }] },
       orderBy: { time: 'desc' },
     })
 
@@ -212,7 +216,7 @@ export class MemberService {
   }
 
   async get(id: number) {
-    const m = this.prismaService.member.findUnique({ where: { id } })
+    const m = await this.prismaService.member.findUnique({ where: { id } })
     const arrBalances = await this.prismaService.balance.findMany({
       include: { serviceItem: true },
       where: { memberId: id },
@@ -269,13 +273,13 @@ export class MemberService {
     //插入充值记录
     await this.prismaService.chargeItem.create({
       data: {
-        memberId:1,
+        memberId: 1,
         pay: 0, //实际支付
         amount: 0, //单付
-        balance:0,
+        balance: 0,
         time: new Date(),
-        serviceItems:{
-          create:arrBalances
+        serviceItems: {
+          create: arrBalances,
         },
         shopId,
       },
@@ -336,11 +340,12 @@ export class MemberService {
     } //新顾客
     else {
       delete member.id
-      const no = (await this.getNo()).toString()
+      const no = await this.getNo()
 
       const r = await this.prismaService.member.create({
         data: {
           no,
+          oid: '',
           name: member.name,
           balance,
           consume: 0,
@@ -403,7 +408,12 @@ export class MemberService {
         where: { id: member.id },
       })
       if (balance) {
-        Sms.chargeSms(m.phone, m.no.substring(2), balance, accountBalance)
+        Sms.chargeSms(
+          m.phone,
+          m.no.toString().substring(2),
+          balance,
+          accountBalance,
+        )
       } else if (arrBalances.length) {
         const headB = arrBalances.find((b) => b.serviceItemId == HeadID)
         if (headB) {
@@ -430,7 +440,7 @@ export class MemberService {
       orderBy: { no: 'desc' },
     })
 
-    if (maxNo) no = parseInt(maxNo.no) + 1
+    if (maxNo) no = maxNo.no + 1
     return no
   }
   async all(keyword: string, index: number, pageSize: number) {

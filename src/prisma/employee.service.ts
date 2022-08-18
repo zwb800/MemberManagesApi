@@ -7,19 +7,19 @@ import { HeadID } from './member.service'
 @Injectable()
 export class EmployeeService implements IEmployeeService {
   async list() {
-      return await this.prismaService.employee.findMany()
+    return await this.prismaService.employee.findMany()
   }
   constructor(private prismaService: PrismaService) {}
 
   async footer(startDate: Date, endDate: Date, shopId: number) {
     const sumNew = await this.prismaService.member.count({
-      where: { newCardTime: {lte:endDate,gte:startDate}, shopId: shopId },
+      where: { newCardTime: { lte: endDate, gte: startDate }, shopId: shopId },
     })
 
     const consumes = await this.prismaService.consume.findMany({
       include: { employees: { include: { items: true } } },
       where: {
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
         time: { lte: endDate, gte: startDate },
         shopId: shopId,
       },
@@ -31,17 +31,18 @@ export class EmployeeService implements IEmployeeService {
 
     const cards = await this.prismaService.chargeItem.findMany({
       where: {
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
+        NOT: { itemId: null },
         time: { lte: endDate, gte: startDate },
         shopId: shopId,
       },
     })
-    const cardCount = cards.filter((c) => c.itemId != null).length
+    const cardCount = cards.length
 
     let cardPrice = 0
     let otherPrice = 0
 
-    const l = cards.filter((c) => c.itemId != null)
+    const l = cards
 
     if (l.length > 0) {
       cardPrice = l.map((c) => c.pay.toNumber()).reduce((t, n) => t + n)
@@ -120,15 +121,23 @@ export class EmployeeService implements IEmployeeService {
     const employees = await this.prismaService.employee.findMany()
 
     const prepaidCard = await this.prismaService.prepaidCard.findMany()
-    const serviceItems = await this.prismaService.serviceItem.findMany({
-      select: { id: true, shortName: true },
-    })
+    // const serviceItems = await this.prismaService.serviceItem.findMany({
+    //   select: { id: true, shortName: true },
+    // })
 
     const consumes = await this.prismaService.consume.findMany({
-      include: { employees: { include: { items: true } } } ,
+      include: {
+        employees: {
+          select: {
+            employee: { select: { name: true } },
+            employeeId: true,
+            items: { select: { serviceItem: { select: { shortName: true } } } },
+          },
+        },
+      },
       where: {
         time: { lte: endDate, gte: startDate },
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
         shopId,
       },
     })
@@ -138,8 +147,9 @@ export class EmployeeService implements IEmployeeService {
     const charges = await this.prismaService.chargeItem.findMany({
       include: { employees: { select: { employeeId: true } } },
       where: {
-        NOT: [{ itemId: null }, { refund: true }], //过滤单充没办卡
-        shopId: shopId,
+        NOT: [{ itemId: null }], //过滤单充没办卡
+        OR: [{ refund: null }, { refund: false }],
+        shopId,
         time: { lte: endDate, gte: startDate },
       },
     })
@@ -166,15 +176,17 @@ export class EmployeeService implements IEmployeeService {
       for (const c of cArr) {
         const m = members.find((m) => m.id == c.memberId)
         if (m) {
-          const items = []
-          const itemIds = c.employees
+          const items = c.employees
             .find((v) => v.employeeId == e.id)
-            .items.map((p) => p.id)
+            .items.map((ei) => ei.serviceItem.shortName)
+          // const itemIds = c.employees
+          //   .find((v) => v.employeeId == e.id)
+          //   .items.map((p) => p.id)
 
-          for (const i of itemIds) {
-            const s = await serviceItems.find((v) => v.id == i)
-            items.push(s.shortName)
-          }
+          // for (const i of itemIds) {
+          //   const s = await serviceItems.find((v) => v.id == i)
+          //   items.push(s.shortName)
+          // }
 
           consumers.push({
             id: m.id,
@@ -221,18 +233,18 @@ export class EmployeeService implements IEmployeeService {
     endDate.setMonth(endDate.getMonth() + 1)
     endDate.setDate(endDate.getDate() - 1)
     endDate.setHours(23, 59, 59, 999)
-    const db = connect()
     const consumes = await this.prismaService.consume.findMany({
       where: {
         time: { lte: endDate, gte: startDate },
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
       },
       select: { employees: true, time: true },
     })
     const charges = await this.prismaService.chargeItem.findMany({
       where: {
         // itemId: _.neq(null), //过滤单充没办卡
-        NOT: { refund: true, itemId: null },
+        NOT: { itemId: null },
+        OR: [{ refund: false }, { refund: null }],
         time: { lte: endDate, gte: startDate },
       },
       select: {

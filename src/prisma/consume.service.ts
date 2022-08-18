@@ -86,7 +86,8 @@ export class ConsumeService {
               b.balance.toNumber() > priceSum * b.discount.toNumber(),
           )
           let updateResult
-          if (b) {//折扣卡余额足够
+          if (b) {
+            //折扣卡余额足够
             priceSum = (b.discount.toNumber() * 10 * priceSum) / 10
             const balance = parseFloat(
               (b.balance.toNumber() - priceSum).toFixed(1),
@@ -98,7 +99,8 @@ export class ConsumeService {
           } else if (m.balance.toNumber() < priceSum) {
             result = '余额不足'
             return 'insufficient balance'
-          } else {//划储值卡余额
+          } else {
+            //划储值卡余额
             updateResult = await prismaService.member.update({
               where: { id: m.id },
               data: {
@@ -190,9 +192,10 @@ export class ConsumeService {
   }
   async getConsumeList(memberId: any, start: number, count: number) {
     const arr = await this.prismaService.consume.findMany({
+      include:{items:true},
       where: {
         memberId,
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
       },
       orderBy: { time: 'desc' },
       skip: start,
@@ -205,15 +208,16 @@ export class ConsumeService {
     return await this.prismaService.consume.count({
       where: {
         memberId,
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
       },
     })
   }
   async getAllConsumeList(startDate: Date, endDate: Date, shopId: number) {
     const arr = await this.prismaService.consume.findMany({
+      include: { items: true },
       where: {
         time: { lte: endDate, gte: startDate },
-        NOT: { refund: true },
+        OR: [{ refund: false }, { refund: null }],
         shopId,
       },
       orderBy: { time: 'desc' },
@@ -223,25 +227,25 @@ export class ConsumeService {
   }
 
   async toConsumeList(arr) {
-    const arrServiceItems = await this.prismaService.serviceItem.findMany()
+    const arrServiceItems = await this.prismaService.serviceItem.findMany({select:{id:true,name:true}})
     const result = []
     for (const v of arr) {
       const member = await this.prismaService.member.findUnique({
-        where: { id: v.id },
+        where: { id: v.memberId },
         select: { name: true },
       })
       if (member) {
         result.push({
           id: v.id,
           member: member.name,
-          product: v.serviceItems.map((s) => {
+          product: v.items.map((s) => {
             const si = arrServiceItems.find((asi) => asi.id == s.serviceItemId)
             return {
               name: si.name,
               count: s.count,
             }
           }),
-          price: v.price,
+          price: parseFloat(v.price.toFixed(1)),
           time: v.time,
         })
       }

@@ -34,6 +34,7 @@ model serviceItem {
 
 model stock {
   id       Int        @id @default(autoincrement())
+  oid      String
   count    Int
   name     String
   shopId   Int
@@ -51,6 +52,7 @@ model stockLog {
 
 model prepaidCard {
   id      Int     @id @default(autoincrement())
+  oid     String
   deleted Boolean @default(false)
   label   String
   price   Int
@@ -70,11 +72,12 @@ model prepaidCard2serviceItem {
 
 model member {
   id          Int           @id @default(autoincrement())
+  oid         String
   name        String
   phone       String
   consume     Decimal
   balance     Decimal
-  no          String
+  no          Int
   openId      String
   shopId      Int
   newCardTime DateTime
@@ -161,8 +164,8 @@ model balance {
   id            Int         @id @default(autoincrement())
   memberId      Int
   member        member      @relation(fields: [memberId], references: [id])
-  serviceItemId Int
-  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  serviceItemId Int?
+  serviceItem   serviceItem? @relation(fields: [serviceItemId], references: [id])
   balance       Decimal
   discount      Decimal?
 }
@@ -182,5 +185,5 @@ model reservation {
 model reservationAvailable {
   id   Int      @id @default(autoincrement())
   num  Int
-  time DateTime
+  time String
 }

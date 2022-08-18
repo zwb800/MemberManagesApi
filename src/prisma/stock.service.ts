@@ -35,6 +35,7 @@ export class StockService implements IStockService {
         unit,
         shopId,
         count: 0,
+        oid:''
       },
     })
   }

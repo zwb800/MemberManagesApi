@@ -11,7 +11,7 @@ export class MemberController{
     constructor(private readonly memberService: MemberService) {}
 
     @Get('get')
-    async get (@Query('id')id){
+    async get (@Query('id',new ParseIntPipe())id){
         return this.memberService.get(id)
     }
 
@@ -32,7 +32,7 @@ export class MemberController{
     @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.memberService.getAllChargeList(startDate,endDate,showGift,showPayOnce,shopId)
+        return this.memberService.getAllChargeList(startDate,endDate,showGift,showPayOnce,parseInt(shopId))
     }
 
     @Post("refund")
@@ -41,7 +41,7 @@ export class MemberController{
     }
 
     @Get('charge-list')
-    async getChargeList(@Query('memberId')memberId){
+    async getChargeList(@Query('memberId',new ParseIntPipe())memberId){
         return this.memberService.getChargeList(memberId)
     }
 

@@ -20,12 +20,12 @@ export class ConsumeController {
     }
 
     @Get()
-    async getConsumeList(@Query("memberId") memberId,@Query("start",ParseIntPipe) start:number,@Query("count",ParseIntPipe) count:number){
+    async getConsumeList(@Query("memberId",new ParseIntPipe()) memberId,@Query("start",ParseIntPipe) start:number,@Query("count",ParseIntPipe) count:number){
         return this.consumeService.getConsumeList(memberId,start,count)
     }
 
     @Get("list_count")
-    async getConsumeListCount(@Query("memberId") memberId){
+    async getConsumeListCount(@Query("memberId",new ParseIntPipe()) memberId){
         return this.consumeService.getConsumeListCount(memberId)
     }
 
@@ -35,6 +35,6 @@ export class ConsumeController {
         @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.consumeService.getAllConsumeList(startDate,endDate,shopId)
+        return this.consumeService.getAllConsumeList(startDate,endDate,parseInt(shopId))
     }
 }
