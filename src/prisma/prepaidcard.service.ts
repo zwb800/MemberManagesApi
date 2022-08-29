@@ -5,6 +5,8 @@ import { PrismaService } from 'src/prisma.service'
 export class PrepaidCardService {
   constructor(private prismaService: PrismaService) {}
   async list() {
-    return await this.prismaService.prepaidCard.findMany()
+    return await this.prismaService.prepaidCard.findMany({
+      where: { deleted: false, },
+    })
   }
 }

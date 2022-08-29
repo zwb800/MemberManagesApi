@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
+import {
+  Prisma,
+  balance as Balance,
+  prepaidCard,
+  prepaidCard2serviceItem,
+  serviceItem,
+} from '@prisma/client'
 import { PrismaService } from 'src/prisma.service'
 import { Sms } from 'src/sms'
 export const HeadID = 1
@@ -179,7 +185,7 @@ export class MemberService {
           serviceItems: v.serviceItems.map((s) => {
             return { count: s.count, name: s.serviceItem.name }
           }),
-          employees: v.employees.map(e=>e.employeeId),
+          employees: v.employees.map((e) => e.employeeId),
         })
       }
     }
@@ -295,9 +301,14 @@ export class MemberService {
     employees: number[],
     shopId: number,
   ) {
-    let prepayCard = null
+    let prepayCard: prepaidCard & {
+      prepaidCard2serviceItem: prepaidCard2serviceItem[]
+    } = null
     if (cardId)
       prepayCard = await this.prismaService.prepaidCard.findUnique({
+        include: {
+          prepaidCard2serviceItem: true,
+        },
         where: { id: cardId },
       })
     let balance = amount
@@ -314,9 +325,9 @@ export class MemberService {
           balance: prepayCard.price,
         })
       }
-      if (prepayCard.serviceItemIds) {
+      if (prepayCard) {
         arrBalances = arrBalances.concat(
-          prepayCard.serviceItemIds.map((p) => {
+          prepayCard.prepaidCard2serviceItem.map((p) => {
             return {
               serviceItemId: p.serviceItemId,
               balance: p.count,
@@ -326,7 +337,7 @@ export class MemberService {
       }
     }
     let accountBalance = 0
-    let balancesOld = []
+    let balancesOld = Array<Balance>()
     if (member.id) {
       balancesOld = await this.prismaService.balance.findMany({
         where: { memberId: member.id },
@@ -351,7 +362,7 @@ export class MemberService {
           consume: 0,
           newCardTime: new Date(),
           shopId,
-          openId: member.openId,
+          openId: member.openId ? member.openId : '',
           phone: member.phone,
         },
       })
@@ -360,7 +371,10 @@ export class MemberService {
     }
 
     for (const b of arrBalances) {
-      if (b.discount && balancesOld.some((bo) => bo.discount == b.discount)) {
+      if (
+        b.discount &&
+        balancesOld.some((bo) => bo.discount && bo.discount.equals(b.discount))
+      ) {
         //折扣卡
         await this.prismaService.balance.updateMany({
           where: { memberId: member.id, discount: b.discount },
@@ -399,7 +413,7 @@ export class MemberService {
           balance: accountBalance, //充完余额
           pay: pay, //实际支付
           amount, //单付
-          itemId: prepayCard ? prepayCard._id : null,
+          itemId: prepayCard ? prepayCard.id : null,
           time: new Date(),
           shopId: shopId,
         },

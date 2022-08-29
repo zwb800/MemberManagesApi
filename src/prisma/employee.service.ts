@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Decimal } from '@prisma/client/runtime'
 import { IEmployeeService } from 'src/mongodb/employee.service'
 import { PrismaService } from 'src/prisma.service'
 import { connect } from './db'
@@ -95,9 +96,9 @@ export class EmployeeService implements IEmployeeService {
       }
     })
 
-    let sale = 0
+    let sale:Decimal = new Decimal(0)
     if (consumes.length > 0) {
-      sale = consumes.map((c) => c.price.toNumber()).reduce((t, n) => t + n)
+      sale = consumes.map((c) => c.price).reduce((t, n) => t .add(n))
     }
 
     return {

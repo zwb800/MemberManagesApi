@@ -11,22 +11,23 @@ export class ConsumeController {
         @Body('employees')employees,
         @Headers('shopId') shopId:string){
         
-        return this.consumeService.consume(memberId,serviceItems,employees,parseInt(shopId))
+        const result = await this.consumeService.consume(memberId,serviceItems,employees,parseInt(shopId))
+        return result
     }
 
     @Post("refund")
     async refund(@Body("id",new ParseIntPipe())id:number){
-        return this.consumeService.refund(id)
+        return await this.consumeService.refund(id)
     }
 
     @Get()
     async getConsumeList(@Query("memberId",new ParseIntPipe()) memberId,@Query("start",ParseIntPipe) start:number,@Query("count",ParseIntPipe) count:number){
-        return this.consumeService.getConsumeList(memberId,start,count)
+        return await this.consumeService.getConsumeList(memberId,start,count)
     }
 
     @Get("list_count")
     async getConsumeListCount(@Query("memberId",new ParseIntPipe()) memberId){
-        return this.consumeService.getConsumeListCount(memberId)
+        return await this.consumeService.getConsumeListCount(memberId)
     }
 
     @Get("getAllConsumeList")
@@ -35,6 +36,6 @@ export class ConsumeController {
         @Query('endDate')endDate:Date,@Headers('shopId')shopId){
         startDate = new Date(startDate)
         endDate = new Date(endDate)
-        return this.consumeService.getAllConsumeList(startDate,endDate,parseInt(shopId))
+        return await this.consumeService.getAllConsumeList(startDate,endDate,parseInt(shopId))
     }
 }

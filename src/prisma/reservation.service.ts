@@ -4,19 +4,24 @@ import { PrismaService } from 'src/prisma.service'
 
 @Injectable()
 export class ReservationService {
+  async available() {
+    return await this.prismaService.reservationAvailable.findMany()
+  }
   constructor(private prismaService: PrismaService) {}
 
   async cancelById(id: number) {
-    return this.prismaService.reservation.update({
+    const result = await this.prismaService.reservation.update({
       where: { id },
       data: { deleted: true },
     })
+
+    return result.deleted
   }
 
   async list(shopId: number) {
     const today = new Date(format(new Date(), 'yyyy-MM-dd'))
     const reservations = await this.prismaService.reservation.findMany({
-      where: { shopId, time: { gte: today }, deleted: null },
+      where: { shopId, time: { gte: today }, deleted: false },
       orderBy: { time: 'asc' },
     })
     const result = []

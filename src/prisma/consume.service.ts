@@ -37,14 +37,14 @@ export class ConsumeService {
 
     let result = null
     try {
-      this.prismaService.$transaction(async (prismaService) => {
+      await this.prismaService.$transaction(async (prismaService) => {
         for (const s of serviceItems) {
           let acount = 0 //划余额次数
           let decount = 0 //划次卡次数
           const ba = balances.find((b) => b.serviceItemId == s.serviceItemId)
           if (ba && ba.balance) {
             //如果还有次数 先划次 否则划余额
-            if (ba.balance.toNumber() >= s.count)
+            if (ba.balance.greaterThanOrEqualTo(s.count))
               //次数足够
               decount = s.count
             //次数不足
@@ -82,8 +82,8 @@ export class ConsumeService {
           //扣除余额
           const b = balances.find(
             (b) =>
-              b.discount.lessThan(1) &&
-              b.balance.toNumber() > priceSum * b.discount.toNumber(),
+              b.discount!=null && b.discount.lessThan(1) &&
+              b.balance.greaterThan(b.discount.mul(priceSum)),
           )
           let updateResult
           if (b) {
@@ -96,9 +96,16 @@ export class ConsumeService {
               where: { id: b.id },
               data: { balance },
             })
-          } else if (m.balance.toNumber() < priceSum) {
+
+            await prismaService.member.update({
+              where: { id: m.id },
+              data: {
+                consume: { increment: priceSum },
+              },
+            })
+          } else if (m.balance.lessThan(priceSum)) {
             result = '余额不足'
-            return 'insufficient balance'
+            return
           } else {
             //划储值卡余额
             updateResult = await prismaService.member.update({

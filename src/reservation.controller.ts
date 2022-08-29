@@ -23,7 +23,7 @@ export class ReservationController {
 
   @Get()
   async get() {
-    return await get('ReservationAvailable')
+    return await this.reservationService.available()
   }
 
   @Get('getByOpenID')
@@ -33,13 +33,13 @@ export class ReservationController {
 
   @Get('list')
   async list(@Headers('shopId') shopId) {
-    return await this.reservationService.list(shopId)
+    return await this.reservationService.list(parseInt(shopId))
   }
 
-  @Get('all')
-  async all(@Query('shopId') shopId) {
-    return await this.reservationService.list(shopId)
-  }
+  // @Get('all')
+  // async all(@Query('shopId') shopId) {
+  //   return await this.reservationService.list(parseInt(shopId))
+  // }
 
   @Get('code2OpenID')
   async code2OpenID(@Query('code') code) {
@@ -113,7 +113,7 @@ export class ReservationController {
   }
 
   @Post('cancelById')
-  async cancelById(@Body('id') id) {
+  async cancelById(@Body('id') id:number) {
     return await this.reservationService.cancelById(id)
   }
 }
