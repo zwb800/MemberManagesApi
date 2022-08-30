@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "deploy": "nest build --webpack && cd dist && serverless deploy"
+    "deploy": "nest build --webpack && scp -r -i c:/Users/zwb/.ssh/id_ed25519  dist/* zwb@winpad:/home/zwb/membermanages-api/",
+    "deploy2": "nest build --webpack && cd dist && serverless deploy"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^2.7.1",
