@@ -42,7 +42,7 @@ export class ConsumeService {
           let acount = 0 //划余额次数
           let decount = 0 //划次卡次数
           const ba = balances.find((b) => b.serviceItemId == s.serviceItemId)
-          if (ba && ba.balance) {
+          if (ba && ba.balance.greaterThan(0)) {
             //如果还有次数 先划次 否则划余额
             if (ba.balance.greaterThanOrEqualTo(s.count))
               //次数足够
