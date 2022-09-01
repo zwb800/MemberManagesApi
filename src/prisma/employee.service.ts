@@ -207,7 +207,7 @@ export class EmployeeService implements IEmployeeService {
         if (m) {
           const card = prepaidCard.find((p) => p.id == c.itemId)
           chargeResult.push({
-            _id: m.id,
+            id: m.id,
             name: m.name,
             card: card,
             commission: card.price ? card.price / 10 / c.employees.length : 0,

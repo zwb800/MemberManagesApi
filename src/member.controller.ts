@@ -108,10 +108,10 @@ export class MemberController {
 
   @Post('gift')
   async gift(
-    @Body('memberId') memberId,
+    @Body('memberId',ParseIntPipe) memberId,
     @Body('gifts') gifts,
     @Headers('shopId') shopId,
   ) {
-    return await this.memberService.gift(memberId, gifts, shopId)
+    return await this.memberService.gift(memberId, gifts, parseInt(shopId))
   }
 }

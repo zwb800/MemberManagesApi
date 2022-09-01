@@ -279,7 +279,7 @@ export class MemberService {
     //插入充值记录
     await this.prismaService.chargeItem.create({
       data: {
-        memberId: 1,
+        memberId,
         pay: 0, //实际支付
         amount: 0, //单付
         balance: 0,
