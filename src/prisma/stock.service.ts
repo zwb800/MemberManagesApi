@@ -48,7 +48,6 @@ export class StockService implements IStockService {
         stockLog: {
           create: [
             {
-              stockId: id,
               count: num,
               time: new Date(),
             },
