@@ -138,7 +138,7 @@ export class MemberService {
   ) {
     const arrCards = await this.prismaService.prepaidCard.findMany()
 
-    const filter = {
+    let filter: Prisma.chargeItemWhereInput = {
       time: { lte: endDate, gte: startDate },
       OR: [{ refund: false }, { refund: null }],
       shopId,
@@ -149,7 +149,7 @@ export class MemberService {
     }
     if (showPayOnce) {
     } else {
-      //   filter['itemId'] = null
+      filter = Object.assign(filter, { NOT: { itemId: null } })
     }
 
     const arr = await this.prismaService.chargeItem.findMany({

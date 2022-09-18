@@ -33,17 +33,15 @@ export class EmployeeService implements IEmployeeService {
     const cards = await this.prismaService.chargeItem.findMany({
       where: {
         OR: [{ refund: false }, { refund: null }],
-        NOT: { itemId: null },
         time: { lte: endDate, gte: startDate },
         shopId: shopId,
       },
     })
-    const cardCount = cards.length
-
     let cardPrice = 0
     let otherPrice = 0
 
-    const l = cards
+    const l = cards.filter(c=>c.itemId!=null)
+    const cardCount = l.length
 
     if (l.length > 0) {
       cardPrice = l.map((c) => c.pay.toNumber()).reduce((t, n) => t + n)
@@ -96,9 +94,9 @@ export class EmployeeService implements IEmployeeService {
       }
     })
 
-    let sale:Decimal = new Decimal(0)
+    let sale: Decimal = new Decimal(0)
     if (consumes.length > 0) {
-      sale = consumes.map((c) => c.price).reduce((t, n) => t .add(n))
+      sale = consumes.map((c) => c.price).reduce((t, n) => t.add(n))
     }
 
     return {
@@ -239,7 +237,15 @@ export class EmployeeService implements IEmployeeService {
         time: { lte: endDate, gte: startDate },
         OR: [{ refund: false }, { refund: null }],
       },
-      select: { employees: true, time: true },
+      select: {
+        employees: {
+          select: {
+            items: { select: { serviceItemId: true } },
+            employeeId: true,
+          },
+        },
+        time: true,
+      },
     })
     const charges = await this.prismaService.chargeItem.findMany({
       where: {
@@ -249,13 +255,23 @@ export class EmployeeService implements IEmployeeService {
         time: { lte: endDate, gte: startDate },
       },
       select: {
-        employees: true,
+        employees: { select: { employeeId: true } },
         pay: true,
         time: true,
         shopId: true,
       },
     })
 
-    return { consumes, charges }
+    return {
+      consumes,
+      charges: charges.map((c) => {
+        return {
+          employees: c.employees.map(e=>e.employeeId),
+          pay: c.pay.toNumber(),
+          time: c.time,
+          shopId: c.shopId,
+        }
+      }),
+    }
   }
 }

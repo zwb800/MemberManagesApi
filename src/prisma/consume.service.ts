@@ -155,6 +155,7 @@ export class ConsumeService {
           },
         })
       })
+      console.log('consume complete')
     } catch (err) {
       console.error(err)
     }

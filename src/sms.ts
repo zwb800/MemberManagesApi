@@ -28,10 +28,10 @@ export const Sms = {
         }
         
         if(process.env.SERVERLESS){
+          console.log('begin send sms')
           Sms.client.SendSms(params, function (err, response) {
             if (err) {
               console.log(err)
-              return
             }
             console.log(response)
           })

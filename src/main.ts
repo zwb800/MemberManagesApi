@@ -4,8 +4,6 @@ import {io} from 'socket.io-client'
 import { PrismaService } from './prisma.service';
 
 async function bootstrap() {
-
-  
   
   const app = await NestFactory.create(AppModule,{ 
       //   httpsOptions:{
@@ -20,6 +18,7 @@ async function bootstrap() {
 
   // const socket = io('wss://service-em8ysfmx-1305763203.sh.apigw.tencentcs.com/release/')
   // socket.emit('newReservation')
+  
 
   await app.listen(9000);
 }

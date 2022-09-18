@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client'
 import { AppService } from './app.service'
 import { PrismaService } from './prisma.service'
 import { PushGateway } from './push.gateway'
+import { Sms } from './sms'
 
 @Controller()
 export class AppController {
@@ -22,6 +23,9 @@ export class AppController {
   @Get()
   async getHello() {
     this.pushGateway.push({})
+    console.log(process.env)
+    // Sms.send(["11111111"],'',[])
+    Sms.consumeSms('111111111','001',0,0)
     return this.appService.getHello()
   }
 
@@ -264,19 +268,22 @@ export class AppController {
             price: json.price,
             employees: {
               create: json.employees
-                ? json.employees.filter(e=>e).map((e) => {
-                    return {
-                      employeeId: employees.find((es) => es.oid == e.employeeId)
-                        .id,
-                      items: {
-                        create: e.items.map((ei) => {
-                          return {
-                            serviceItemId: items.find((i) => i.oid == ei).id,
-                          }
-                        }),
-                      },
-                    }
-                  })
+                ? json.employees
+                    .filter((e) => e)
+                    .map((e) => {
+                      return {
+                        employeeId: employees.find(
+                          (es) => es.oid == e.employeeId,
+                        ).id,
+                        items: {
+                          create: e.items.map((ei) => {
+                            return {
+                              serviceItemId: items.find((i) => i.oid == ei).id,
+                            }
+                          }),
+                        },
+                      }
+                    })
                 : [],
             },
             items: {
@@ -299,10 +306,9 @@ export class AppController {
         return true
       }
 
-      if(!arrNotExists.includes(json.memberId)){
+      if (!arrNotExists.includes(json.memberId)) {
         arrNotExists.push(json.memberId)
-        console.log('未找到 ' + json.memberId+" "+arrNotExists.length)
-
+        console.log('未找到 ' + json.memberId + ' ' + arrNotExists.length)
       }
       return false
     }
