@@ -48,7 +48,7 @@ export class ConsumeService {
               //次数足够
               decount = s.count
             //次数不足
-            else return 'insufficient balance'
+            else throw new Error('余额不足')
 
             if (decount > 0) {
               s.counterCard = true //次卡消费
@@ -104,8 +104,7 @@ export class ConsumeService {
               },
             })
           } else if (m.balance.lessThan(priceSum)) {
-            result = '余额不足'
-            return
+            throw new Error('余额不足')            
           } else {
             //划储值卡余额
             updateResult = await prismaService.member.update({
@@ -158,6 +157,7 @@ export class ConsumeService {
       console.log('consume complete')
     } catch (err) {
       console.error(err)
+      result = err.message
     }
 
     return result
