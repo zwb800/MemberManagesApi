@@ -355,7 +355,7 @@ export class MemberService {
 
       const r = await this.prismaService.member.create({
         data: {
-          no,
+          no: no.toString(),
           oid: '',
           name: member.name,
           balance,
@@ -454,7 +454,7 @@ export class MemberService {
       orderBy: { no: 'desc' },
     })
 
-    if (maxNo) no = maxNo.no + 1
+    if (maxNo) no = parseInt(maxNo.no) + 1
     return no
   }
   async all(keyword: string, index: number, pageSize: number) {

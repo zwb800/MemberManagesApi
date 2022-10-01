@@ -18,27 +18,26 @@ model employee {
 }
 
 model serviceItem {
-  id        Int    @id @default(autoincrement())
-  oid       String
-  name      String
-  shortName String
-  price     Int
-
-  prepaidCard2serviceItem      prepaidCard2serviceItem[]
-  consume2serviceItem          consume2serviceItem[]
-  consume2employee             consume2employee[]
-  consume2employee2serviceItem consume2employee2serviceItem[]
+  id                           Int                            @id @default(autoincrement())
+  oid                          String
+  name                         String
+  shortName                    String
+  price                        Int
   balance                      balance[]
   chargeItem2serviceItem       chargeItem2serviceItem[]
+  consume2employee             consume2employee[]
+  consume2employee2serviceItem consume2employee2serviceItem[]
+  consume2serviceItem          consume2serviceItem[]
+  prepaidCard2serviceItem      prepaidCard2serviceItem[]
 }
 
 model stock {
   id       Int        @id @default(autoincrement())
-  oid      String
   count    Int
   name     String
   shopId   Int
   unit     String
+  oid      String?
   stockLog stockLog[]
 }
 
@@ -46,101 +45,99 @@ model stockLog {
   id      Int      @id @default(autoincrement())
   count   Int
   stockId Int
-  stock   stock    @relation(fields: [stockId], references: [id])
   time    DateTime
+  stock   stock    @relation(fields: [stockId], references: [id])
 }
 
 model prepaidCard {
-  id       Int     @id @default(autoincrement())
-  oid      String
-  deleted  Boolean @default(false)
-  label    String
-  price    Int
-  discount Decimal?
-  gift     Int?
-
-  prepaidCard2serviceItem prepaidCard2serviceItem[]
+  id                      Int                       @id @default(autoincrement())
+  deleted                 Boolean                   @default(false)
+  label                   String
+  price                   Int
+  oid                     String?
+  gift                    Int?
+  discount                Decimal?
   chargeItem              chargeItem[]
+  prepaidCard2serviceItem prepaidCard2serviceItem[]
 }
 
 model prepaidCard2serviceItem {
   id            Int         @id @default(autoincrement())
   prepaidCardId Int
-  prepaidCard   prepaidCard @relation(fields: [prepaidCardId], references: [id])
   serviceItemId Int
-  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
   count         Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  prepaidCard   prepaidCard @relation(fields: [prepaidCardId], references: [id])
 }
 
 model member {
   id          Int           @id @default(autoincrement())
-  oid         String
   name        String
   phone       String
   consume     Decimal
   balance     Decimal
-  no          Int
-  openId      String?
+  no          String
+  openId      String
   shopId      Int
   newCardTime DateTime
-  consumes    consume[]
-  chargeItem  chargeItem[]
+  oid         String?
   balances    balance[]
+  chargeItem  chargeItem[]
+  consumes    consume[]
   reservation reservation[]
 }
 
 model consume {
   id        Int                   @id @default(autoincrement())
   memberId  Int
-  member    member                @relation(fields: [memberId], references: [id])
   price     Decimal
   shopId    Int
   time      DateTime
   refund    Boolean?
-  items     consume2serviceItem[]
+  member    member                @relation(fields: [memberId], references: [id])
   employees consume2employee[]
+  items     consume2serviceItem[]
 }
 
 model consume2employee {
   id         Int                            @id @default(autoincrement())
   consumeId  Int
-  consume    consume                        @relation(fields: [consumeId], references: [id])
   employeeId Int
   employee   serviceItem                    @relation(fields: [employeeId], references: [id])
+  consume    consume                        @relation(fields: [consumeId], references: [id])
   items      consume2employee2serviceItem[]
 }
 
 model consume2employee2serviceItem {
   id                 Int              @id @default(autoincrement())
   consume2employeeId Int
-  consume2employee   consume2employee @relation(fields: [consume2employeeId], references: [id])
   serviceItemId      Int
   serviceItem        serviceItem      @relation(fields: [serviceItemId], references: [id])
+  consume2employee   consume2employee @relation(fields: [consume2employeeId], references: [id])
 }
 
 model consume2serviceItem {
   id            Int         @id @default(autoincrement())
   consumeId     Int
-  consume       consume     @relation(fields: [consumeId], references: [id])
   serviceItemId Int
-  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
   count         Int
   counterCard   Boolean
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  consume       consume     @relation(fields: [consumeId], references: [id])
 }
 
 model chargeItem {
-  id       Int          @id @default(autoincrement())
-  pay      Decimal
-  amount   Decimal
-  balance  Decimal
-  itemId   Int?
-  card     prepaidCard? @relation(fields: [itemId], references: [id])
-  shopId   Int
-  time     DateTime
-  memberId Int
-  refund   Boolean?
-  member   member       @relation(fields: [memberId], references: [id])
-
+  id           Int                      @id @default(autoincrement())
+  pay          Decimal
+  amount       Decimal
+  balance      Decimal
+  itemId       Int?
+  shopId       Int
+  time         DateTime
+  memberId     Int
+  refund       Boolean?
+  member       member                   @relation(fields: [memberId], references: [id])
+  card         prepaidCard?             @relation(fields: [itemId], references: [id])
   employees    chargeItem2employee[]
   serviceItems chargeItem2serviceItem[]
 }
@@ -148,28 +145,28 @@ model chargeItem {
 model chargeItem2employee {
   id         Int        @id @default(autoincrement())
   chargeId   Int
-  charge     chargeItem @relation(fields: [chargeId], references: [id])
   employeeId Int
   employee   employee   @relation(fields: [employeeId], references: [id])
+  charge     chargeItem @relation(fields: [chargeId], references: [id])
 }
 
 model chargeItem2serviceItem {
   id            Int         @id @default(autoincrement())
   chargeId      Int
-  charge        chargeItem  @relation(fields: [chargeId], references: [id])
   serviceItemId Int
-  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
   count         Int
+  serviceItem   serviceItem @relation(fields: [serviceItemId], references: [id])
+  charge        chargeItem  @relation(fields: [chargeId], references: [id])
 }
 
 model balance {
   id            Int          @id @default(autoincrement())
   memberId      Int
-  member        member       @relation(fields: [memberId], references: [id])
   serviceItemId Int?
-  serviceItem   serviceItem? @relation(fields: [serviceItemId], references: [id])
   balance       Decimal
   discount      Decimal?
+  serviceItem   serviceItem? @relation(fields: [serviceItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  member        member       @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model reservation {
@@ -185,7 +182,7 @@ model reservation {
 }
 
 model reservationAvailable {
-  id   Int    @id @default(autoincrement())
+  id   Int     @id @default(autoincrement())
   num  Int
-  time String
+  time String?
 }
