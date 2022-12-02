@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "deploy": "nest build && scp -r -i c:/Users/zwb/.ssh/id_ed25519  dist/* zwb@winpad:/home/zwb/membermanages-api/ && ssh winpad pm2 restart mm-api",
+    "deploy": "nest build && scp -r  dist/* root@119.45.154.134:/www/wwwroot/membermanages-api/ && ssh root@119.45.154.134 /www/server/nvm/versions/node/v16.16.0/bin/pm2 restart mm-api",
     "deploy2": "nest build && cd dist && serverless deploy"
   },
   "dependencies": {

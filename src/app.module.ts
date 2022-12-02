@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { ConsumeController } from './consume.controller'
@@ -28,11 +28,15 @@ import { PushGateway } from './push.gateway'
 import { PrismaService } from './prisma.service'
 import { ServiceItemService } from './prisma/serviceitem.service'
 // import { IServiceItemService } from './mongodb/db'
-import { EmployeeService, EmployeeService as PrisamEmployeeService } from './prisma/employee.service'
+import {
+  EmployeeService,
+  EmployeeService as PrisamEmployeeService,
+} from './prisma/employee.service'
 import { MemberService } from './prisma/member.service'
 import { ConsumeService } from './prisma/consume.service'
 import { ReservationService } from './prisma/reservation.service'
 import { PrepaidCardService } from './prisma/prepaidcard.service'
+import { AuthMiddleware } from './auth.middleware'
 
 @Module({
   imports: [],
@@ -56,7 +60,7 @@ import { PrepaidCardService } from './prisma/prepaidcard.service'
     ConsumeService,
     StockService,
     ReservationService,
-    PrepaidCardService
+    PrepaidCardService,
     // { provide: IServiceItemService, useClass: ServiceItemService },
     // { provide: IMemberService, useClass: MemberService },
     // { provide: IEmployeeService, useClass: PrisamEmployeeService },
@@ -65,4 +69,8 @@ import { PrepaidCardService } from './prisma/prepaidcard.service'
     // { provide: IReservationService, useClass: ReservationService },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('*')
+  }
+}

@@ -22,11 +22,10 @@ export class AppController {
 
   @Get()
   async getHello() {
-    this.pushGateway.push({})
-    console.log(process.env)
+    // this.pushGateway.push({})
     // Sms.send(["11111111"],'',[])
-    Sms.consumeSms('111111111','001',0,0)
-    return this.appService.getHello()
+    // Sms.consumeSms('111111111','001',0,0)
+    return process.env
   }
 
   @Post()
