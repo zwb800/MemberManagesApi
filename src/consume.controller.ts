@@ -15,6 +15,15 @@ export class ConsumeController {
         return result
     }
 
+    @Post("work")
+    async work(
+        @Body('consumeId',new ParseIntPipe()) consumeId:number,
+        @Body('employees')employees){
+        
+        const result = await this.consumeService.work(consumeId,employees)
+        return result
+    }
+
     @Post("refund")
     async refund(@Body("id",new ParseIntPipe())id:number){
         return await this.consumeService.refund(id)

@@ -6,7 +6,44 @@ import { HeadID } from './member.service'
 @Injectable()
 export class ConsumeService {
   constructor(private prismaService: PrismaService) {}
+  async work(
+    consumeId: number,
 
+    employees: { employeeId: number; items: number[] }[],
+  ) {
+    let result = null
+    try {
+      await this.prismaService.$transaction(async (prismaService) => {
+        const c2e = await prismaService.consume2employee.findMany({
+          where: { consumeId },
+          select: { id: true },
+        })
+        await prismaService.consume2employee2serviceItem.deleteMany({
+          where: { consume2employeeId: { in: c2e.map((c) => c.id) } },
+        })
+        await prismaService.consume2employee.deleteMany({
+          where: { consumeId },
+        })
+        for (const e of employees) {
+          await prismaService.consume2employee.create({
+            data: {
+              employeeId: e.employeeId,
+              consumeId,
+              items: {
+                create: e.items.map((ei) => {
+                  return { serviceItemId: ei }
+                }),
+              },
+            },
+          })
+        }
+      })
+    } catch (err) {
+      console.error(err)
+      result = err.message
+    }
+    return result
+  }
   async consume(
     memberId: number,
     serviceItems: {
@@ -82,7 +119,8 @@ export class ConsumeService {
           //扣除余额
           const b = balances.find(
             (b) =>
-              b.discount!=null && b.discount.lessThan(1) &&
+              b.discount != null &&
+              b.discount.lessThan(1) &&
               b.balance.greaterThan(b.discount.mul(priceSum)),
           )
           let updateResult
@@ -104,7 +142,7 @@ export class ConsumeService {
               },
             })
           } else if (m.balance.lessThan(priceSum)) {
-            throw new Error('余额不足')            
+            throw new Error('余额不足')
           } else {
             //划储值卡余额
             updateResult = await prismaService.member.update({
@@ -200,7 +238,7 @@ export class ConsumeService {
   }
   async getConsumeList(memberId: any, start: number, count: number) {
     const arr = await this.prismaService.consume.findMany({
-      include:{items:true},
+      include: { items: true },
       where: {
         memberId,
         OR: [{ refund: false }, { refund: null }],
@@ -235,7 +273,9 @@ export class ConsumeService {
   }
 
   async toConsumeList(arr) {
-    const arrServiceItems = await this.prismaService.serviceItem.findMany({select:{id:true,name:true}})
+    const arrServiceItems = await this.prismaService.serviceItem.findMany({
+      select: { id: true, name: true },
+    })
     const result = []
     for (const v of arr) {
       const member = await this.prismaService.member.findUnique({
