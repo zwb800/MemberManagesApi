@@ -27,7 +27,7 @@ export const Sms = {
           TemplateParamSet: templateParams,
         }
         
-        if(process.env.SERVERLESS){
+        if((!phones.some(p=>p=='15311508135')) && process.env.SERVERLESS){
           console.log('begin send sms')
           Sms.client.SendSms(params, function (err, response) {
             if (err) {

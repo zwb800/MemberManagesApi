@@ -11,7 +11,7 @@ export class AuthMiddleware implements NestMiddleware {
     if(req.header("shopId") == "1" || req.header("shopId") == "2" ){
       next()
     } else {
-      Logger.error(req.ip + ' not allowed')
+      Logger.error('shopId is null '+req.ip + ' not allowed')
       res.end()
     }
   }

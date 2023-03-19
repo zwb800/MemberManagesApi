@@ -70,7 +70,6 @@ export class ConsumeService {
     const sItems = await this.prismaService.serviceItem.findMany({
       where: { id: { in: sids } },
     })
-    let priceSum = 0
 
     let result = null
     try {
@@ -109,19 +108,32 @@ export class ConsumeService {
 
           if (acount > 0) {
             s.counterCard = false //储值卡消费
-            const as = sItems.find((asi) => asi.id == s.serviceItemId)
-            const price = as.price * s.count
-            priceSum += price
           }
         }
+        let priceSum = 0
+        if (serviceItems.some((s) => s.counterCard == false)) {
+          let priceSumNew = 0
+          for (const s of serviceItems.filter((s) => s.counterCard == false)) {
+            const as = sItems.find((asi) => asi.id == s.serviceItemId)
+            // TODO 根据办卡
+            // balance表添加charge_time charge_time过2023-3-20后的划卡按58元计算
 
-        if (priceSum > 0) {
-          //扣除余额
+            const price = as.price * s.count
+            priceSum += price
+            priceSumNew += price
+
+            if (as.name == '头疗') {
+              priceSumNew += 10
+            }
+          }
+
+          //扣除涨价前余额
           const b = balances.find(
             (b) =>
               b.discount != null &&
               b.discount.lessThan(1) &&
-              b.balance.greaterThan(b.discount.mul(priceSum)),
+              b.cardId == null &&
+              b.balance.greaterThanOrEqualTo(b.discount.mul(priceSum)),
           )
           let updateResult
           if (b) {
@@ -141,17 +153,43 @@ export class ConsumeService {
                 consume: { increment: priceSum },
               },
             })
-          } else if (m.balance.lessThan(priceSum)) {
-            throw new Error('余额不足')
           } else {
-            //划储值卡余额
-            updateResult = await prismaService.member.update({
-              where: { id: m.id },
-              data: {
-                balance: { decrement: priceSum },
-                consume: { increment: priceSum },
-              },
-            })
+            //扣除涨价后余额
+            const b = balances.find(
+              (b) =>
+                b.discount != null &&
+                b.discount.lessThan(1) &&
+                b.cardId != null &&
+                b.balance.greaterThanOrEqualTo(b.discount.mul(priceSumNew)),
+            )
+            if (b) {
+              priceSum = (b.discount.toNumber() * 10 * priceSumNew) / 10
+              const balance = parseFloat(
+                (b.balance.toNumber() - priceSum).toFixed(1),
+              )
+              updateResult = await prismaService.balance.update({
+                where: { id: b.id },
+                data: { balance },
+              })
+
+              await prismaService.member.update({
+                where: { id: m.id },
+                data: {
+                  consume: { increment: priceSum },
+                },
+              })
+            } else if (m.balance.greaterThanOrEqualTo(priceSum)) {
+              //划储值卡余额
+              updateResult = await prismaService.member.update({
+                where: { id: m.id },
+                data: {
+                  balance: { decrement: priceSum },
+                  consume: { increment: priceSum },
+                },
+              })
+            } else {
+              throw new Error('余额不足')
+            }
           }
 
           Sms.consumeSms(

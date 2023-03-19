@@ -59,6 +59,7 @@ model prepaidCard {
   discount                Decimal?
   chargeItem              chargeItem[]
   prepaidCard2serviceItem prepaidCard2serviceItem[]
+  balance                 balance[]
 }
 
 model prepaidCard2serviceItem {
@@ -163,10 +164,12 @@ model balance {
   id            Int          @id @default(autoincrement())
   memberId      Int
   serviceItemId Int?
+  cardId        Int?
   balance       Decimal
   discount      Decimal?
   serviceItem   serviceItem? @relation(fields: [serviceItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   member        member       @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  card          prepaidCard? @relation(fields: [cardId], references: [id])
 }
 
 model reservation {

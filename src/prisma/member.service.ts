@@ -224,7 +224,7 @@ export class MemberService {
   async get(id: number) {
     const m = await this.prismaService.member.findUnique({ where: { id } })
     const arrBalances = await this.prismaService.balance.findMany({
-      include: { serviceItem: true },
+      include: { serviceItem: true, card: true },
       where: { memberId: id },
     })
 
@@ -232,6 +232,8 @@ export class MemberService {
       let label = ''
       if (p.serviceItem) {
         label = p.serviceItem.name
+      } else if (p.cardId) {
+        label = p.card.label
       } else if (p.discount) {
         label = p.discount.toNumber() * 10 + '折卡'
       }
@@ -323,6 +325,7 @@ export class MemberService {
         arrBalances = arrBalances.concat({
           discount: prepayCard.discount,
           balance: prepayCard.price,
+          cardId: prepayCard.id,
         })
       }
       if (prepayCard) {
@@ -372,12 +375,12 @@ export class MemberService {
 
     for (const b of arrBalances) {
       if (
-        b.discount &&
-        balancesOld.some((bo) => bo.discount && bo.discount.equals(b.discount))
+        b.cardId &&
+        balancesOld.some((bo) => bo.cardId && bo.cardId == b.cardId)
       ) {
         //折扣卡
         await this.prismaService.balance.updateMany({
-          where: { memberId: member.id, discount: b.discount },
+          where: { memberId: member.id, cardId: b.cardId },
           data: { balance: { increment: b.balance } },
         })
       } else if (
@@ -396,6 +399,7 @@ export class MemberService {
             serviceItemId: b.serviceItemId,
             discount: b.discount,
             balance: b.balance,
+            cardId: b.cardId,
           },
         })
       }
