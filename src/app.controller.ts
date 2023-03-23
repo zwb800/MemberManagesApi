@@ -28,6 +28,70 @@ export class AppController {
     return process.env
   }
 
+  @Get('m')
+  async getAllMember() {
+    const ms = await this.prisma.member.findMany({
+      include: {
+        balances: { include: { serviceItem: true } },
+        chargeItem: {
+          include: {
+            card: true,
+            serviceItems: { include: { serviceItem: true } },
+          },
+        },
+      },
+    })
+
+    let refundSum = 0
+
+    const result = ms.map((m) => {
+      const consume_balance = m.consume.add(m.balance).toNumber()
+
+      let refundAmount = 0
+      if (consume_balance == 400) {
+        refundAmount = 100
+      } else if (consume_balance == 500) {
+        refundAmount = 200
+      } else if (consume_balance == 700) {
+        refundAmount = 200
+      } else if (consume_balance == 900) {
+        refundAmount = 400
+      } else if (consume_balance == 2000) {
+        refundAmount = 1000
+      }
+
+      refundSum += Math.max(m.balance.toNumber() - refundAmount, 0)
+
+      return {
+        name: m.name,
+        consume_balance,
+        balance: m.balance.toNumber(),
+        balances: m.balances
+          .filter((b) => b.balance.greaterThan(0) && b.serviceItem)
+          .map((b) => b.serviceItem.shortName + 'x' + b.balance)
+          .join(' '),
+        gift: m.chargeItem
+          .filter((c) => c.pay.equals(0))
+          .map((c) =>
+            c.serviceItems
+              .map((s) => s.serviceItem.shortName + 'x' + s.count)
+              .join(' '),
+          )
+          .join(' '),
+        chargeCard: m.chargeItem.filter((c) => c.card).map((c) => c.card.label),
+        charges: m.chargeItem
+          .filter((c) => c.card == null && c.pay.greaterThan(0))
+          .map((c) => c.pay)
+          .join(' '),
+      }
+    })
+
+    return {
+      refundSum,
+      result,
+    }
+  }
+
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async importTcb(@UploadedFile() file: Express.Multer.File) {

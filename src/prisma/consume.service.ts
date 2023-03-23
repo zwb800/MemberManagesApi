@@ -179,7 +179,7 @@ export class ConsumeService {
                 },
               })
             } else if (m.balance.greaterThanOrEqualTo(priceSum)) {
-              //划储值卡余额
+              //划储值卡余额 或散客
               updateResult = await prismaService.member.update({
                 where: { id: m.id },
                 data: {
