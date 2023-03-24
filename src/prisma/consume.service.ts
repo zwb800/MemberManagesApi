@@ -120,10 +120,9 @@ export class ConsumeService {
 
             const price = as.price * s.count
             priceSum += price
-            priceSumNew += price
-
+            
             if (as.name == '头疗') {
-              priceSumNew += 10
+              priceSumNew += ((as.price+10) * s.count)
             }
           }
 
