@@ -124,6 +124,9 @@ export class ConsumeService {
             if (as.name == '头疗') {
               priceSumNew += ((as.price+10) * s.count)
             }
+            else {
+              priceSumNew += price
+            }
           }
 
           //扣除涨价前余额
