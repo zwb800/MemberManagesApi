@@ -8,11 +8,11 @@ const ALLOW_IPS = process.env.ALLOW_IP
 export class AuthMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     // if (ALLOW_IPS.some((v) => req.ip.includes(v))) {
-    if(req.header("shopId") == "1" || req.header("shopId") == "2" ){
+    // if(req.header("shopId") == "1" || req.header("shopId") == "2" ){
       next()
-    } else {
-      Logger.error('shopId is null '+req.ip + ' not allowed')
-      res.end()
-    }
+    // } else {
+      // Logger.error('shopId is null '+req.ip + ' not allowed')
+      // res.end()
+    // }
   }
 }

@@ -43,6 +43,8 @@ export class AppController {
     })
 
     let refundSum = 0
+    let head = 0
+    let jiang = 0
 
     const result = ms.map((m) => {
       const consume_balance = m.consume.add(m.balance).toNumber()
@@ -61,7 +63,25 @@ export class AppController {
       }
 
       refundSum += Math.max(m.balance.toNumber() - refundAmount, 0)
+      const headBalance = m.balances.filter(
+        (b) =>
+          b.balance.greaterThan(0) &&
+          b.serviceItem &&
+          b.serviceItem.name == '头疗',
+      )
+      if (headBalance.length > 0) {
+        head += headBalance[0].balance.toNumber()
+      }
 
+      const jiangBalance = m.balances.filter(
+        (b) =>
+          b.balance.greaterThan(0) &&
+          b.serviceItem &&
+          b.serviceItem.name == '姜疗',
+      )
+      if (jiangBalance.length > 0) {
+        jiang += jiangBalance[0].balance.toNumber()
+      }
       return {
         name: m.name,
         consume_balance,
@@ -87,9 +107,80 @@ export class AppController {
     })
 
     return {
+      总: { 头疗: head, 姜疗: jiang },
       refundSum,
       result,
     }
+  }
+
+  @Get('balance')
+  async getBalance() {
+    const bs = await this.prisma.balance.findMany({
+      where: {
+        NOT: { discount: null },
+        discount: { lt: 1 },
+        cardId: null,
+        balance: { gte: 48 },
+        member: { NOT: { name: { contains: '已退卡' } } },
+      },
+      orderBy: { balance: 'desc' },
+      select: { balance: true, member: { select: { name: true } } },
+    })
+
+    const ms = await this.prisma.member.findMany({
+      where: {
+        balance: { gte: 48 },
+        NOT: { name: { contains: '已退卡' } },
+      },
+      orderBy: { balance: 'desc' },
+      select: { name: true, balance: true },
+    })
+
+    const cc = await this.prisma.balance.findMany({
+      where: {
+        NOT: { cardId: null },
+        balance: { gt: 0 },
+      },
+    })
+
+    let sum = 0
+    for (const b of bs) {
+      sum += b.balance.toNumber()
+    }
+
+    let sum2 = 0
+    for (const m of ms) {
+      sum2 += m.balance.toNumber()
+    }
+
+    // return {
+    //   折扣卡总额:sum,
+    //   储值卡总额:sum2,
+    //   折扣卡用户数:bs.length,
+    //   储值卡用户数:ms.length,
+    //   members:bs.map(b=>{
+    //     return {
+    //       name:b.member.name,
+    //       balance:b.balance,
+    //     }
+    //   }),
+
+    //   储值卡用户:ms
+    // }
+
+    let str = '折扣卡,,\n会员名,余额,\n'
+
+    bs.forEach((b) => {
+      str += b.member.name + ',' + b.balance + ',\n'
+    })
+
+    str += '储值卡,,\n'
+
+    ms.forEach((m) => {
+      str += m.name + ',' + m.balance + ',\n'
+    })
+
+    return str
   }
 
   @Post()
@@ -320,7 +411,7 @@ export class AppController {
     const employees = await this.prisma.employee.findMany({
       select: { id: true, oid: true },
     })
-    const arrNotExists = new Array<String>()
+    const arrNotExists = new Array<string>()
 
     return async (json) => {
       const m = members.find((m) => m.oid == json.memberId)
