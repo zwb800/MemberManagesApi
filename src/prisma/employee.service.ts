@@ -40,7 +40,7 @@ export class EmployeeService implements IEmployeeService {
     let cardPrice = 0
     let otherPrice = 0
 
-    const l = cards.filter(c=>c.itemId!=null)
+    const l = cards.filter((c) => c.itemId != null)
     const cardCount = l.length
 
     if (l.length > 0) {
@@ -103,7 +103,7 @@ export class EmployeeService implements IEmployeeService {
       sum,
       new: sumNew,
       items,
-      sale,
+      sale: sale.toFixed(1).endsWith('.0') ? sale.toFixed(0) : sale.toFixed(1),
       cardCount,
       cardPrice,
       otherPrice,
@@ -266,7 +266,7 @@ export class EmployeeService implements IEmployeeService {
       consumes,
       charges: charges.map((c) => {
         return {
-          employees: c.employees.map(e=>e.employeeId),
+          employees: c.employees.map((e) => e.employeeId),
           pay: c.pay.toNumber(),
           time: c.time,
           shopId: c.shopId,

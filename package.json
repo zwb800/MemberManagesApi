@@ -20,8 +20,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "pulldb":"scp root@119.45.154.134:/www/wwwroot/membermanages-api/mm.db ./",
-    "deploy": "nest build && scp -r  dist/* root@119.45.154.134:/www/wwwroot/membermanages-api/ && ssh root@119.45.154.134 /www/server/nvm/versions/node/v16.16.0/bin/pm2 restart mm-api",
-    "deploy2": "nest build && cd dist && serverless deploy"
+    "deploy": "nest build && scp -r  dist/* root@119.45.154.134:/www/wwwroot/membermanages-api/ && ssh root@119.45.154.134 pm2 restart mm-api",
+    "deploy:local": "nest build && cp -r  dist/* /www/wwwroot/membermanages-api/ && pm2 restart mm-api"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^2.7.1",
