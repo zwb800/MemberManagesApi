@@ -25,7 +25,7 @@ export class AppController {
     // this.pushGateway.push({})
     // Sms.send(["11111111"],'',[])
     // Sms.consumeSms('111111111','001',0,0)
-    return process.env
+    // return process.env
   }
 
   @Get('m')
