@@ -18,7 +18,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly pushGateway: PushGateway,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   @Get()
   async getHello() {
@@ -40,9 +40,13 @@ export class AppController {
           },
         },
       },
+      where: { NOT: { name: "散客" } },
+      orderBy: { newCardTime: 'asc' }
     })
 
     let refundSum = 0
+    let discountSum = 0
+    let headBalanceSum = 0
     let head = 0
     let jiang = 0
 
@@ -58,7 +62,11 @@ export class AppController {
         refundAmount = 200
       } else if (consume_balance == 900) {
         refundAmount = 400
-      } else if (consume_balance == 2000) {
+      }
+      else if (consume_balance == 1500) {
+        refundAmount = 500
+      }
+      else if (consume_balance == 2000) {
         refundAmount = 1000
       }
 
@@ -69,8 +77,30 @@ export class AppController {
           b.serviceItem &&
           b.serviceItem.name == '头疗',
       )
+      let headB = 0;
+      let headBal = 0;
       if (headBalance.length > 0) {
-        head += headBalance[0].balance.toNumber()
+        headB = headBalance[0].balance.toNumber();
+        head += headB;
+        const cc = m.chargeItem.filter(p => p.card != null && p.card.label.startsWith("1288-"))
+        if (cc.length > 0) {
+          if (cc[0].card.label == "1288-48次卡") {
+            headBal = 1288 / 48 * headB
+          }
+          else if (cc[0].card.label == "1288-38次卡") {
+            headBal = 1288 / 38 * headB
+
+          }
+          else {
+            headBal = 1288 / 58 * headB
+
+          }
+
+        }
+        else {
+          headBal = 1288 / 58 * headB
+        }
+        headBalanceSum += headBal
       }
 
       const jiangBalance = m.balances.filter(
@@ -79,18 +109,38 @@ export class AppController {
           b.serviceItem &&
           b.serviceItem.name == '姜疗',
       )
+      let jiangB = 0;
       if (jiangBalance.length > 0) {
-        jiang += jiangBalance[0].balance.toNumber()
+        jiangB = jiangBalance[0].balance.toNumber()
+        jiang += jiangB
       }
+
+      const disCountB = m.balances.filter(b => b.discount != null)
+      let discountBalance = 0
+      if (disCountB.length > 0) {
+        for (const d of disCountB) {
+          discountBalance += d.balance.toNumber()
+        }
+        discountSum += discountBalance
+      }
+
+      if (headB < 2 && jiangB < 2 && discountBalance < 30 && m.balance.lessThan(100)
+      ) {
+        return
+      }
+
+
       return {
-        name: m.name,
-        consume_balance,
-        balance: m.balance.toNumber(),
-        balances: m.balances
+        姓名: m.name,
+        余额加消费: consume_balance,
+        储值卡余额: m.balance.toNumber(),
+        折扣卡余额: discountBalance,
+        计次余额: m.balances
           .filter((b) => b.balance.greaterThan(0) && b.serviceItem)
           .map((b) => b.serviceItem.shortName + 'x' + b.balance)
           .join(' '),
-        gift: m.chargeItem
+        次卡退卡金额: headBal,
+        赠送: m.chargeItem
           .filter((c) => c.pay.equals(0))
           .map((c) =>
             c.serviceItems
@@ -98,17 +148,21 @@ export class AppController {
               .join(' '),
           )
           .join(' '),
-        chargeCard: m.chargeItem.filter((c) => c.card).map((c) => c.card.label),
-        charges: m.chargeItem
+        充值: m.chargeItem.filter((c) => c.card).map((c) => c.card.label),
+        单充: m.chargeItem
           .filter((c) => c.card == null && c.pay.greaterThan(0))
           .map((c) => c.pay)
           .join(' '),
       }
-    })
+    }).filter(p => p != null)
 
     return {
       总: { 头疗: head, 姜疗: jiang },
-      refundSum,
+      储值卡金额: refundSum,
+      折扣卡金额: discountSum,
+      次卡金额: headBalanceSum,
+      总会员数量: ms.length,
+      应退会员数量: result.length,
       result,
     }
   }
@@ -362,21 +416,21 @@ export class AppController {
             employees: {
               create: json.employees
                 ? json.employees.map((e) => {
-                    return {
-                      employeeId: employees.find((es) => es.oid == e).id,
-                    }
-                  })
+                  return {
+                    employeeId: employees.find((es) => es.oid == e).id,
+                  }
+                })
                 : [],
             },
             serviceItems: {
               create: json.serviceItems
                 ? json.serviceItems.map((s) => {
-                    return {
-                      serviceItemId: items.find((i) => i.oid == s.serviceItemId)
-                        .id,
-                      count: s.count,
-                    }
-                  })
+                  return {
+                    serviceItemId: items.find((i) => i.oid == s.serviceItemId)
+                      .id,
+                    count: s.count,
+                  }
+                })
                 : [],
             },
             refund: json.refund,
@@ -423,33 +477,33 @@ export class AppController {
             employees: {
               create: json.employees
                 ? json.employees
-                    .filter((e) => e)
-                    .map((e) => {
-                      return {
-                        employeeId: employees.find(
-                          (es) => es.oid == e.employeeId,
-                        ).id,
-                        items: {
-                          create: e.items.map((ei) => {
-                            return {
-                              serviceItemId: items.find((i) => i.oid == ei).id,
-                            }
-                          }),
-                        },
-                      }
-                    })
+                  .filter((e) => e)
+                  .map((e) => {
+                    return {
+                      employeeId: employees.find(
+                        (es) => es.oid == e.employeeId,
+                      ).id,
+                      items: {
+                        create: e.items.map((ei) => {
+                          return {
+                            serviceItemId: items.find((i) => i.oid == ei).id,
+                          }
+                        }),
+                      },
+                    }
+                  })
                 : [],
             },
             items: {
               create: json.serviceItems
                 ? json.serviceItems.map((s) => {
-                    return {
-                      serviceItemId: items.find((i) => i.oid == s.serviceItemId)
-                        .id,
-                      count: s.count,
-                      counterCard: s.counterCard ? s.counterCard : false,
-                    }
-                  })
+                  return {
+                    serviceItemId: items.find((i) => i.oid == s.serviceItemId)
+                      .id,
+                    count: s.count,
+                    counterCard: s.counterCard ? s.counterCard : false,
+                  }
+                })
                 : [],
             },
             refund: json.refund,
