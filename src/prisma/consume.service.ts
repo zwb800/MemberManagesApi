@@ -160,7 +160,7 @@ export class ConsumeService {
             const b = balances.find(
               (b) =>
                 b.discount != null &&
-                b.discount.lessThan(1) &&
+                // b.discount.lessThan(1) &&
                 b.cardId != null &&
                 b.balance.greaterThanOrEqualTo(b.discount.mul(priceSumNew)),
             )

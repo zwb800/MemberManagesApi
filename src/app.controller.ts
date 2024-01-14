@@ -163,6 +163,7 @@ export class AppController {
       次卡金额: headBalanceSum,
       总会员数量: ms.length,
       应退会员数量: result.length,
+      应退金额:refundSum+discountSum+headBalanceSum,
       result,
     }
   }
